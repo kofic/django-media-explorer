@@ -1,8 +1,8 @@
 import traceback, csv, copy
 from django.http import HttpResponse
-from django.contrib import admin
-from django.conf import settings
-from django.contrib.auth.models import User
+from localhost import admin
+from localhost.conf.settings import settings
+from localhost.core.models import User
 from media_explorer.models import Element, Gallery, GalleryElement, ResizedImage, element_post_save
 from django.db.models import signals
 
