@@ -45,7 +45,8 @@ REST_FRAMEWORK = {
     'DATETIME_FORMAT': "%Y-%m-%d %T",
 }
 
-CKEDITOR_JQUERY_URL = "https://code.jquery.com/jquery-1.11.2.min.js"
+#CKEDITOR_JQUERY_URL = "https://code.jquery.com/jquery-1.11.2.min.js"
+CKEDITOR_JQUERY_URL = "/static/js/jquery-1.11.2.min.js"
 
 CKEDITOR_UPLOAD_PATH = "uploads/"
 
