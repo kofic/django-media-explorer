@@ -1,6 +1,6 @@
 # Django Media Explorer
 
-*This fork is meant to work with the LocalHost platform.*
+*This branch is built of the '0.4_boto3_2' branch and is meant to work with the LocalHost platform.*
 
 A Django application to manage your images, video links, embeds and create slideshows.
 
