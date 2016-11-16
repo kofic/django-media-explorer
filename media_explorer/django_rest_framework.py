@@ -9,7 +9,8 @@ from django.db.models import Q
 class ElementSerializer(serializers.ModelSerializer):
     class Meta:
         model = Element
-        fields = ('id','site_id','name','file_name','type','credit','description','thumbnail_image_url','image_url','video_url','video_embed','created_at')
+        #fields = ('id','site_id','name','file_name','type','credit','description','thumbnail_image_url','image_url','video_url','video_embed','created_at')
+        fields = ('id','name','file_name','type','credit','description','thumbnail_image_url','image_url','video_url','video_embed','created_at')
 
     def update(self, instance, validated_data):
         for field in validated_data:
@@ -164,7 +165,8 @@ class ElementDetail(views.APIView):
 class ResizedImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = ResizedImage
-        fields = ('id','site_id','image','file_name','size','image_url','image_width','image_height','created_at')
+        #fields = ('id','site_id','image','file_name','size','image_url','image_width','image_height','created_at')
+        fields = ('id','image','file_name','size','image_url','image_width','image_height','created_at')
 
 class ResizedImageList(views.APIView):
     """
@@ -199,13 +201,15 @@ class GalleryElementSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = GalleryElement
-        fields = ('id','site_id','type','name','credit','description','thumbnail_image_url','image_url','video_url','video_embed','sort_by','created_at')
+        #fields = ('id','site_id','type','name','credit','description','thumbnail_image_url','image_url','video_url','video_embed','sort_by','created_at')
+        fields = ('id','type','name','credit','description','thumbnail_image_url','image_url','video_url','video_embed','sort_by','created_at')
 
 class GallerySerializer(serializers.ModelSerializer):
     elements = GalleryElementSerializer(source='galleryelement_set', many=True, required=False, read_only=True)
     class Meta:
         model = Gallery
-        fields = ('id','site_id','name','description','thumbnail_image_url','elements','created_at')
+        #fields = ('id','site_id','name','description','thumbnail_image_url','elements','created_at')
+        fields = ('id','name','description','thumbnail_image_url','elements','created_at')
 
     def validate_name(self, value):
         """
