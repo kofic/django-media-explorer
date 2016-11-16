@@ -1,19 +1,19 @@
 import os
 
 # Comment this if you have already set it
-PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
+#PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 
 # Comment this if you have already set it
-STATIC_URL = "/static/"
+#STATIC_URL = "/static/"
 
 # Comment this if you have already set it
-STATIC_ROOT = os.path.join(PROJECT_ROOT, STATIC_URL.strip("/"))
+#STATIC_ROOT = os.path.join(PROJECT_ROOT, STATIC_URL.strip("/"))
 
 # Comment this if you have already set it
-MEDIA_URL = STATIC_URL + "media/"
+#MEDIA_URL = STATIC_URL + "media/"
 
 # Comment this if you have already set it
-MEDIA_ROOT = os.path.join(PROJECT_ROOT, *MEDIA_URL.strip("/").split("/"))
+#MEDIA_ROOT = os.path.join(PROJECT_ROOT, *MEDIA_URL.strip("/").split("/"))
 
 DME_RESIZE = True
 
