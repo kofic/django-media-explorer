@@ -28,7 +28,7 @@ class ElementList(views.APIView):
         #NOTE: Code below must match ElementStatsView.get
         #TODO - move to helper so you don't maintain same code twice
         query = None
-        and_query = Q(site_id=self.request.session["site_id"])
+        and_query = Q(site_id=self.request.session.get("site_id", settings.SITE_ID))
         or_query = None
         type = self.request.QUERY_PARAMS.get('type', None)
         filter = self.request.QUERY_PARAMS.get('filter', None)
@@ -89,7 +89,7 @@ class ElementList(views.APIView):
             )
 
         # TODO - is request.DATA mutable? will this work?
-        request.DATA["site_id"] = request.session["site_id"]
+        request.DATA["site_id"] = request.session.get("site_id", settings.SITE_ID)
 
         serializer = ElementSerializer(data=request.DATA)
         if serializer.is_valid():
@@ -122,7 +122,7 @@ class ElementDetail(views.APIView):
             raise Http404
 
     def get(self, request, pk, format=None):
-        element = self.get_object(pk, request.session["site_id"])
+        element = self.get_object(pk, request.session.get("site_id", settings.SITE_ID))
         serializer = ElementSerializer(element)
         return response.Response(serializer.data)
 
@@ -131,9 +131,9 @@ class ElementDetail(views.APIView):
         try:
 
             # TODO - is request.DATA mutable? will this work?
-            request.DATA["site_id"] = request.session["site_id"]
+            request.DATA["site_id"] = request.session.get("site_id", settings.SITE_ID)
 
-            element = self.get_object(pk, request.session["site_id"])
+            element = self.get_object(pk, request.session.get("site_id", settings.SITE_ID))
             serializer = ElementSerializer(element, data=request.DATA)
             if serializer.is_valid():
                 serializer.save()
@@ -157,7 +157,7 @@ class ElementDetail(views.APIView):
           print traceback.format_exc()
 
     def delete(self, request, pk, format=None):
-        element = self.get_object(pk, request.session["site_id"])
+        element = self.get_object(pk, request.session.get("site_id", settings.SITE_ID))
         element.delete()
         return response.Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -176,7 +176,7 @@ class ResizedImageList(views.APIView):
         element_id = self.request.QUERY_PARAMS.get('element_id', None)
         queryset = ResizedImage.objects.none()
         if element_id is not None:
-            queryset = ResizedImage.objects.filter(image_id=element_id, site_id=self.request.session["site_id"])
+            queryset = ResizedImage.objects.filter(image_id=element_id, site_id=self.request.session.get("site_id", settings.SITE_ID))
         return queryset
 
     def get(self, request, format=None):
@@ -225,7 +225,7 @@ class GalleryList(views.APIView):
         #NOTE: Code below must match GalleryStatsView.get
         #TODO - move to helper so you don't maintain same code twice
         query = None
-        and_query = Q(site_id=self.request.session["site_id"])
+        and_query = Q(site_id=self.request.session.get("site_id", settings.SITE_ID))
         or_query = None
         filter = self.request.QUERY_PARAMS.get('filter', None)
         sort = self.request.QUERY_PARAMS.get('sort', "created_at")
@@ -273,7 +273,7 @@ class GalleryList(views.APIView):
 
     def post(self, request, format=None):
         # TODO - is request.DATA mutable? will this work?
-        request.DATA["site_id"] = request.session["site_id"]
+        request.DATA["site_id"] = request.session.get("site_id", settings.SITE_ID)
         serializer = GallerySerializer(data=request.DATA)
         if serializer.is_valid():
             serializer.save()
@@ -283,21 +283,21 @@ class GalleryList(views.APIView):
                 element_ids = request.DATA.getlist("element_id")
                 credits = request.DATA.getlist("element_credit")
                 descriptions = request.DATA.getlist("element_description")
-                gallery = Gallery.objects.get(id=serializer.data["id"], site_id=request.session["site_id"])
+                gallery = Gallery.objects.get(id=serializer.data["id"], site_id=request.session.get("site_id", settings.SITE_ID))
                 count = 0
                 for element_id in element_ids:
                     if not element_id:
                         count += 1
                         continue
-                    if Element.objects.filter(id=element_id, site_id=request.session["site_id"]).exists():
-                        element = Element.objects.get(id=element_id, site_id=request.session["site_id"])
-                        if GalleryElement.objects.filter(gallery=gallery,element=element, site_id=request.session["site_id"]).exists():
-                            galleryelement = GalleryElement.objects.get(gallery=gallery,element=element, site_id=request.session["site_id"])
+                    if Element.objects.filter(id=element_id, site_id=request.session.get("site_id", settings.SITE_ID)).exists():
+                        element = Element.objects.get(id=element_id, site_id=request.session.get("site_id", settings.SITE_ID))
+                        if GalleryElement.objects.filter(gallery=gallery,element=element, site_id=request.session.get("site_id", settings.SITE_ID)).exists():
+                            galleryelement = GalleryElement.objects.get(gallery=gallery,element=element, site_id=request.session.get("site_id", settings.SITE_ID))
                         else:
                             galleryelement = GalleryElement()
                             galleryelement.gallery = gallery
                             galleryelement.element = element
-                            galleryelement.site_id = request.session["site_id"]
+                            galleryelement.site_id = request.session.get("site_id", settings.SITE_ID)
 
                         try:
                             galleryelement.credit = credits[count]
@@ -335,12 +335,12 @@ class GalleryDetail(views.APIView):
             raise Http404
 
     def get(self, request, pk, format=None):
-        gallery = self.get_object(pk, request.session["site_id"])
+        gallery = self.get_object(pk, request.session.get("site_id", settings.SITE_ID))
         serializer = GallerySerializer(gallery)
         return response.Response(serializer.data)
 
     def put(self, request, pk, format=None):
-        gallery = self.get_object(pk, request.session["site_id"])
+        gallery = self.get_object(pk, request.session.get("site_id", settings.SITE_ID))
         serializer = GallerySerializer(gallery, data=request.DATA)
         if serializer.is_valid():
             serializer.save()
@@ -361,25 +361,25 @@ class GalleryDetail(views.APIView):
                 #Delete elements
                 for element_id in delete_element_ids:
                     element = Element.objects.get(id=element_id)
-                    galleryelement = GalleryElement.objects.get(gallery=gallery, element=element, site_id=request.session["site_id"])
+                    galleryelement = GalleryElement.objects.get(gallery=gallery, element=element, site_id=request.session.get("site_id", settings.SITE_ID))
                     galleryelement.delete()
 
                 #Add elements
-                gallery = Gallery.objects.get(id=serializer.data["id"], site_id=request.session["site_id"])
+                gallery = Gallery.objects.get(id=serializer.data["id"], site_id=request.session.get("site_id", settings.SITE_ID))
                 count = 0
                 for element_id in element_ids:
                     if not element_id:
                         count += 1
                         continue
-                    if Element.objects.filter(id=element_id, site_id=request.session["site_id"]).exists():
-                        element = Element.objects.get(id=element_id, site_id=request.session["site_id"])
-                        if GalleryElement.objects.filter(gallery=gallery,element=element, site_id=request.session["site_id"]).exists():
-                            galleryelement = GalleryElement.objects.get(gallery=gallery,element=element, site_id=request.session["site_id"])
+                    if Element.objects.filter(id=element_id, site_id=request.session.get("site_id", settings.SITE_ID)).exists():
+                        element = Element.objects.get(id=element_id, site_id=request.session.get("site_id", settings.SITE_ID))
+                        if GalleryElement.objects.filter(gallery=gallery,element=element, site_id=request.session.get("site_id", settings.SITE_ID)).exists():
+                            galleryelement = GalleryElement.objects.get(gallery=gallery,element=element, site_id=request.session.get("site_id", settings.SITE_ID))
                         else:
                             galleryelement = GalleryElement()
                             galleryelement.gallery = gallery
                             galleryelement.element = element
-                            galleryelement.site_id = request.session["site_id"]
+                            galleryelement.site_id = request.session.get("site_id", settings.SITE_ID)
                         galleryelement.credit = credits[count]
                         galleryelement.description = descriptions[count]
                         galleryelement.sort_by = sort_by
@@ -397,7 +397,7 @@ class GalleryDetail(views.APIView):
         return response.Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, pk, format=None):
-        element = self.get_object(pk, request.session.["site_id"])
+        element = self.get_object(pk, request.session.get("site_id", settings.SITE_ID))
         element.delete()
         return response.Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -414,13 +414,13 @@ class GalleryElementDetail(views.APIView):
             raise Http404
 
     def get(self, request, pk, format=None):
-        element = self.get_object(pk, request.session["site_id"])
+        element = self.get_object(pk, request.session.get("site_id", settings.SITE_ID))
         serializer = GalleryElementSerializer(element)
         return response.Response(serializer.data)
 
     def put(self, request, pk, format=None):
-        element = self.get_object(pk, request.session["site_id"])
-        request.DATA["site_id"] = request.session["site_id"]
+        element = self.get_object(pk, request.session.get("site_id", settings.SITE_ID))
+        request.DATA["site_id"] = request.session.get("site_id", settings.SITE_ID)
         serializer = GalleryElementSerializer(element, data=request.DATA)
         if serializer.is_valid():
             serializer.save()
@@ -428,7 +428,7 @@ class GalleryElementDetail(views.APIView):
         return response.Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, pk, format=None):
-        element = self.get_object(pk, request.session["site_id"])
+        element = self.get_object(pk, request.session.get("site_id", settings.SITE_ID))
         element.delete()
         return response.Response(status=status.HTTP_204_NO_CONTENT)
 

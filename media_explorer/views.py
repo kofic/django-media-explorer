@@ -16,7 +16,7 @@ class ElementStatsView(View):
         #TODO - move to helper so you don't maintain same code twice
         data = {}
         query = None
-        and_query = Q(site_id=request.session["site_id"])
+        and_query = Q(site_id=request.session.get("site_id", settings.SITE_ID))
         or_query = None
         type = request.GET.get('type', None)
         filter = request.GET.get('filter', None)
@@ -59,7 +59,7 @@ class GalleryStatsView(View):
         #TODO - move to helper so you don't maintain same code twice
         data = {}
         query = None
-        and_query = Q(site_id=request.session["site_id"])
+        and_query = Q(site_id=request.session.get("site_id", settings.SITE_ID))
         or_query = None
         filter = request.GET.get('filter', None)
 

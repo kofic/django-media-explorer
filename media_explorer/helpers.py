@@ -1,5 +1,6 @@
 import os, re, traceback, mimetypes
-from django.conf import settings
+from localhost.conf.settings import settings
+
 try:
     #For Django version 1.8.13 and below
     from django.db.models import get_model
