@@ -1,8 +1,8 @@
 # Django Media Explorer
 
-A Django application to manage your images, video links, embeds and create slideshows.
+*This fork is meant to work with the LocalHost platform.*
 
-This fork is meant to work with the LocalHost platform.
+A Django application to manage your images, video links, embeds and create slideshows.
 
 **Table of Contents**
 
