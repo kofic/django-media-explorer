@@ -1,15 +1,15 @@
-from django.http import Http404
 import traceback
+from django.http import Http404
 from media_explorer.models import Element, Gallery, GalleryElement, ResizedImage
 from rest_framework import generics, serializers, viewsets
 from rest_framework import views, response, status, parsers
-from django.conf import settings
+from localhost.conf.settings import settings
 from django.db.models import Q
 
 class ElementSerializer(serializers.ModelSerializer):
     class Meta:
         model = Element
-        fields = ('id','name','file_name','type','credit','description','thumbnail_image_url','image_url','video_url','video_embed','created_at')
+        fields = ('id','site_id','name','file_name','type','credit','description','thumbnail_image_url','image_url','video_url','video_embed','created_at')
 
     def update(self, instance, validated_data):
         for field in validated_data:
@@ -28,7 +28,7 @@ class ElementList(views.APIView):
         #NOTE: Code below must match ElementStatsView.get
         #TODO - move to helper so you don't maintain same code twice
         query = None
-        and_query = None
+        and_query = Q(site_id=self.request.session["site_id"])
         or_query = None
         type = self.request.QUERY_PARAMS.get('type', None)
         filter = self.request.QUERY_PARAMS.get('filter', None)
@@ -37,11 +37,8 @@ class ElementList(views.APIView):
         page = int(self.request.QUERY_PARAMS.get('page', 1))
         limit = settings.DME_PAGE_SIZE
 
-        try:
-            if type:
-                and_query = Q(type=type)
-        except Exception as e:
-            pass
+        if type:
+            and_query.add(Q(type=type), Q.AND)
 
         if filter:
             try:
@@ -57,7 +54,7 @@ class ElementList(views.APIView):
 
         if or_query:
             if query:
-                query.add(or_query,Q.AND)
+                query.add(or_query, Q.AND)
             else:
                 query = or_query
 
@@ -68,10 +65,7 @@ class ElementList(views.APIView):
         if direction.lower() == "asc":
             order_by = sort
 
-        if query:
-            queryset = Element.objects.order_by(order_by).filter(query)[offset:next_offset]
-        else:
-            queryset = Element.objects.order_by(order_by).all()[offset:next_offset]
+        queryset = Element.objects.order_by(order_by).filter(query)[offset:next_offset]
 
         return queryset
 
@@ -93,6 +87,9 @@ class ElementList(views.APIView):
                 "Provide an image or a video URL",
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+        # TODO - is request.DATA mutable? will this work?
+        request.DATA["site_id"] = request.session["site_id"]
 
         serializer = ElementSerializer(data=request.DATA)
         if serializer.is_valid():
@@ -118,14 +115,14 @@ class ElementDetail(views.APIView):
     """
     queryset = Element.objects.none()
 
-    def get_object(self, pk):
+    def get_object(self, pk, site_id):
         try:
-            return Element.objects.get(pk=pk)
+            return Element.objects.get(pk=pk, site_id=site_id)
         except Element.DoesNotExist:
             raise Http404
 
     def get(self, request, pk, format=None):
-        element = self.get_object(pk)
+        element = self.get_object(pk, request.session["site_id"])
         serializer = ElementSerializer(element)
         return response.Response(serializer.data)
 
@@ -133,7 +130,10 @@ class ElementDetail(views.APIView):
 
         try:
 
-            element = self.get_object(pk)
+            # TODO - is request.DATA mutable? will this work?
+            request.DATA["site_id"] = request.session["site_id"]
+
+            element = self.get_object(pk, request.session["site_id"])
             serializer = ElementSerializer(element, data=request.DATA)
             if serializer.is_valid():
                 serializer.save()
@@ -157,14 +157,14 @@ class ElementDetail(views.APIView):
           print traceback.format_exc()
 
     def delete(self, request, pk, format=None):
-        element = self.get_object(pk)
+        element = self.get_object(pk, request.session["site_id"])
         element.delete()
         return response.Response(status=status.HTTP_204_NO_CONTENT)
 
 class ResizedImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = ResizedImage
-        fields = ('id','image','file_name','size','image_url','image_width','image_height','created_at')
+        fields = ('id','site_id','image','file_name','size','image_url','image_width','image_height','created_at')
 
 class ResizedImageList(views.APIView):
     """
@@ -176,7 +176,7 @@ class ResizedImageList(views.APIView):
         element_id = self.request.QUERY_PARAMS.get('element_id', None)
         queryset = ResizedImage.objects.none()
         if element_id is not None:
-            queryset = ResizedImage.objects.filter(image_id=element_id)
+            queryset = ResizedImage.objects.filter(image_id=element_id, site_id=self.request.session["site_id"])
         return queryset
 
     def get(self, request, format=None):
@@ -190,6 +190,7 @@ class GalleryElementSerializer(serializers.ModelSerializer):
     id = serializers.ReadOnlyField(source='element.id')
     type = serializers.ReadOnlyField(source='element.type')
     name = serializers.ReadOnlyField(source='element.name')
+    site_id = serializers.ReadOnlyField(source='element.site_id')
     thumbnail_image_url = serializers.ReadOnlyField(source='element.thumbnail_image_url')
     image_url = serializers.ReadOnlyField(source='element.image_url')
     video_url = serializers.ReadOnlyField(source='element.video_url')
@@ -198,13 +199,13 @@ class GalleryElementSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = GalleryElement
-        fields = ('id','type','name','credit','description','thumbnail_image_url','image_url','video_url','video_embed','sort_by','created_at')
+        fields = ('id','site_id','type','name','credit','description','thumbnail_image_url','image_url','video_url','video_embed','sort_by','created_at')
 
 class GallerySerializer(serializers.ModelSerializer):
     elements = GalleryElementSerializer(source='galleryelement_set', many=True, required=False, read_only=True)
     class Meta:
         model = Gallery
-        fields = ('id','name','description','thumbnail_image_url','elements','created_at')
+        fields = ('id','site_id','name','description','thumbnail_image_url','elements','created_at')
 
     def validate_name(self, value):
         """
@@ -218,13 +219,13 @@ class GalleryList(views.APIView):
     """
     List all galleries and their elements or create a new one
     """
-    queryset = Gallery.objects.all()
+    queryset = Gallery.objects.none()
 
     def get_queryset(self, id=None):
         #NOTE: Code below must match GalleryStatsView.get
         #TODO - move to helper so you don't maintain same code twice
         query = None
-        and_query = None
+        and_query = Q(site_id=self.request.session["site_id"])
         or_query = None
         filter = self.request.QUERY_PARAMS.get('filter', None)
         sort = self.request.QUERY_PARAMS.get('sort', "created_at")
@@ -232,11 +233,8 @@ class GalleryList(views.APIView):
         page = int(self.request.QUERY_PARAMS.get('page', 1))
         limit = settings.DME_PAGE_SIZE
 
-        try:
-            if id:
-                and_query = Q(id=id)
-        except Exception as e:
-            pass
+        if id:
+            and_query.add(Q(id=id), Q.AND)
 
         if filter:
             try:
@@ -252,7 +250,7 @@ class GalleryList(views.APIView):
 
         if or_query:
             if query:
-                query.add(or_query,Q.AND)
+                query.add(or_query, Q.AND)
             else:
                 query = or_query
 
@@ -263,11 +261,7 @@ class GalleryList(views.APIView):
         if direction.lower() == "asc":
             order_by = sort
 
-        if query:
-            queryset = Gallery.objects.order_by(order_by).filter(query)[offset:next_offset]
-        else:
-            queryset = Gallery.objects.order_by(order_by).all()[offset:next_offset]
-
+        queryset = Gallery.objects.order_by(order_by).filter(query)[offset:next_offset]
         return queryset
 
     def get(self, request, format=None):
@@ -278,6 +272,8 @@ class GalleryList(views.APIView):
         return response.Response(serializer.data)
 
     def post(self, request, format=None):
+        # TODO - is request.DATA mutable? will this work?
+        request.DATA["site_id"] = request.session["site_id"]
         serializer = GallerySerializer(data=request.DATA)
         if serializer.is_valid():
             serializer.save()
@@ -287,20 +283,21 @@ class GalleryList(views.APIView):
                 element_ids = request.DATA.getlist("element_id")
                 credits = request.DATA.getlist("element_credit")
                 descriptions = request.DATA.getlist("element_description")
-                gallery = Gallery.objects.get(id=serializer.data["id"])
+                gallery = Gallery.objects.get(id=serializer.data["id"], site_id=request.session["site_id"])
                 count = 0
                 for element_id in element_ids:
                     if not element_id:
                         count += 1
                         continue
-                    if Element.objects.filter(id=element_id).exists():
-                        element = Element.objects.get(id=element_id)
-                        if GalleryElement.objects.filter(gallery=gallery,element=element).exists():
-                            galleryelement = GalleryElement.objects.get(gallery=gallery,element=element)
+                    if Element.objects.filter(id=element_id, site_id=request.session["site_id"]).exists():
+                        element = Element.objects.get(id=element_id, site_id=request.session["site_id"])
+                        if GalleryElement.objects.filter(gallery=gallery,element=element, site_id=request.session["site_id"]).exists():
+                            galleryelement = GalleryElement.objects.get(gallery=gallery,element=element, site_id=request.session["site_id"])
                         else:
                             galleryelement = GalleryElement()
                             galleryelement.gallery = gallery
                             galleryelement.element = element
+                            galleryelement.site_id = request.session["site_id"]
 
                         try:
                             galleryelement.credit = credits[count]
@@ -331,19 +328,19 @@ class GalleryDetail(views.APIView):
     """
     queryset = Gallery.objects.none()
 
-    def get_object(self, pk):
+    def get_object(self, pk, site_id):
         try:
-            return Gallery.objects.get(pk=pk)
+            return Gallery.objects.get(pk=pk, site_id=site_id)
         except Gallery.DoesNotExist:
             raise Http404
 
     def get(self, request, pk, format=None):
-        gallery = self.get_object(pk)
+        gallery = self.get_object(pk, request.session["site_id"])
         serializer = GallerySerializer(gallery)
         return response.Response(serializer.data)
 
     def put(self, request, pk, format=None):
-        gallery = self.get_object(pk)
+        gallery = self.get_object(pk, request.session["site_id"])
         serializer = GallerySerializer(gallery, data=request.DATA)
         if serializer.is_valid():
             serializer.save()
@@ -364,24 +361,25 @@ class GalleryDetail(views.APIView):
                 #Delete elements
                 for element_id in delete_element_ids:
                     element = Element.objects.get(id=element_id)
-                    galleryelement = GalleryElement.objects.get(gallery=gallery,element=element)
+                    galleryelement = GalleryElement.objects.get(gallery=gallery, element=element, site_id=request.session["site_id"])
                     galleryelement.delete()
 
                 #Add elements
-                gallery = Gallery.objects.get(id=serializer.data["id"])
+                gallery = Gallery.objects.get(id=serializer.data["id"], site_id=request.session["site_id"])
                 count = 0
                 for element_id in element_ids:
                     if not element_id:
                         count += 1
                         continue
-                    if Element.objects.filter(id=element_id).exists():
-                        element = Element.objects.get(id=element_id)
-                        if GalleryElement.objects.filter(gallery=gallery,element=element).exists():
-                            galleryelement = GalleryElement.objects.get(gallery=gallery,element=element)
+                    if Element.objects.filter(id=element_id, site_id=request.session["site_id"]).exists():
+                        element = Element.objects.get(id=element_id, site_id=request.session["site_id"])
+                        if GalleryElement.objects.filter(gallery=gallery,element=element, site_id=request.session["site_id"]).exists():
+                            galleryelement = GalleryElement.objects.get(gallery=gallery,element=element, site_id=request.session["site_id"])
                         else:
                             galleryelement = GalleryElement()
                             galleryelement.gallery = gallery
                             galleryelement.element = element
+                            galleryelement.site_id = request.session["site_id"]
                         galleryelement.credit = credits[count]
                         galleryelement.description = descriptions[count]
                         galleryelement.sort_by = sort_by
@@ -399,7 +397,7 @@ class GalleryDetail(views.APIView):
         return response.Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, pk, format=None):
-        element = self.get_object(pk)
+        element = self.get_object(pk, request.session.["site_id"])
         element.delete()
         return response.Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -409,19 +407,20 @@ class GalleryElementDetail(views.APIView):
     """
     queryset = GalleryElement.objects.none()
 
-    def get_object(self, pk):
+    def get_object(self, pk, site_id):
         try:
-            return GalleryElement.objects.get(pk=pk)
+            return GalleryElement.objects.get(pk=pk, site_id=site_id)
         except GalleryElement.DoesNotExist:
             raise Http404
 
     def get(self, request, pk, format=None):
-        element = self.get_object(pk)
+        element = self.get_object(pk, request.session["site_id"])
         serializer = GalleryElementSerializer(element)
         return response.Response(serializer.data)
 
     def put(self, request, pk, format=None):
-        element = self.get_object(pk)
+        element = self.get_object(pk, request.session["site_id"])
+        request.DATA["site_id"] = request.session["site_id"]
         serializer = GalleryElementSerializer(element, data=request.DATA)
         if serializer.is_valid():
             serializer.save()
@@ -429,7 +428,7 @@ class GalleryElementDetail(views.APIView):
         return response.Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, pk, format=None):
-        element = self.get_object(pk)
+        element = self.get_object(pk, request.session["site_id"])
         element.delete()
         return response.Response(status=status.HTTP_204_NO_CONTENT)
 

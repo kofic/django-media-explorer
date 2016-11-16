@@ -1,9 +1,13 @@
-import math, json
+import math
+import json
+
 from django.http import HttpResponse
 from django.views.generic import View
 from media_explorer.models import Element, Gallery, GalleryElement
-from django.conf import settings
 from django.db.models import Q
+
+from localhost.conf.settings import settings
+
 
 class ElementStatsView(View):
 
@@ -12,18 +16,15 @@ class ElementStatsView(View):
         #TODO - move to helper so you don't maintain same code twice
         data = {}
         query = None
-        and_query = None
+        and_query = Q(site_id=request.session["site_id"])
         or_query = None
         type = request.GET.get('type', None)
         filter = request.GET.get('filter', None)
 
         data["page_size"] = settings.DME_PAGE_SIZE
 
-        try:
-            if type:
-                and_query = Q(type=type)
-        except Exception as e:
-            pass
+        if type:
+            and_query.add(Q(type=type), Q.AND)
 
         if filter:
             try:
@@ -39,7 +40,7 @@ class ElementStatsView(View):
 
         if or_query:
             if query:
-                query.add(or_query,Q.AND)
+                query.add(or_query, Q.AND)
             else:
                 query = or_query
 
@@ -58,7 +59,7 @@ class GalleryStatsView(View):
         #TODO - move to helper so you don't maintain same code twice
         data = {}
         query = None
-        and_query = None
+        and_query = Q(site_id=request.session["site_id"])
         or_query = None
         filter = request.GET.get('filter', None)
 
@@ -78,7 +79,7 @@ class GalleryStatsView(View):
 
         if or_query:
             if query:
-                query.add(or_query,Q.AND)
+                query.add(or_query, Q.AND)
             else:
                 query = or_query
 
