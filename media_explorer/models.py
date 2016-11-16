@@ -1,16 +1,18 @@
 import os
-from django.db import models
 import traceback
+
+from django.db import models
 from django.utils.translation import ugettext_lazy as _
-from django.contrib.auth.models import User
 from django.db.models import signals
-from django.conf import settings
+
+from localhost.core.models import Base, User
+from localhost.conf.settings import settings
 
 from .helpers import S3Helper
 s3_helper = S3Helper()
 
 
-class Element(models.Model):
+class Element(Base):
     """
     The Element model will contain images and videos
     NOTE: if type=video you can still have a thumbnail_image
@@ -59,7 +61,7 @@ class Element(models.Model):
         super(Element, self).save(*args, **kwargs)
 
 
-class Gallery(models.Model):
+class Gallery(Base):
     """
     The Gallery model will contain info about our media gallery
     """
@@ -79,7 +81,7 @@ class Gallery(models.Model):
     def __unicode__(self):
         return u"%s" % (self.name)
 
-class GalleryElement(models.Model):
+class GalleryElement(Base):
     """
     The Gallery Element model will contain list of elements
     """
@@ -97,7 +99,7 @@ class GalleryElement(models.Model):
         verbose_name_plural = "Gallery elements"
         ordering = ["sort_by"]
 
-class ResizedImage(models.Model):
+class ResizedImage(Base):
     """
     The ResizedImage is a resized image version of Element.image
     """
