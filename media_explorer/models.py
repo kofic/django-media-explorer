@@ -43,8 +43,9 @@ class Element(Base):
     thumbnail_image_width = models.IntegerField(blank=True,null=True,default='0')
     thumbnail_image_height = models.IntegerField(blank=True,null=True,default='0')
     type = models.CharField(_("Type"), max_length=10, default="image",choices=TYPE_CHOICES)
-    created_at = models.DateTimeField(blank=True,null=True,auto_now_add=True)
-    updated_at = models.DateTimeField(blank=True,null=True,auto_now=True)
+    # Provided by localhost.core.models.Base
+    #created_at = models.DateTimeField(blank=True,null=True,auto_now_add=True)
+    #updated_at = models.DateTimeField(blank=True,null=True,auto_now=True)
 
     class Meta:
         verbose_name_plural = "Elements"
@@ -72,8 +73,9 @@ class Gallery(Base):
     thumbnail_image = models.ImageField(blank=True,null=True,max_length=255,upload_to="images/")
     thumbnail_image_url = models.CharField(max_length=255,blank=True,null=True)
     elements = models.ManyToManyField(Element, through="GalleryElement")
-    created_at = models.DateTimeField(blank=True,null=True,auto_now_add=True)
-    updated_at = models.DateTimeField(blank=True,null=True,auto_now=True)
+    # Provided by localhost.core.models.Base
+    #created_at = models.DateTimeField(blank=True,null=True,auto_now_add=True)
+    #updated_at = models.DateTimeField(blank=True,null=True,auto_now=True)
 
     class Meta:
         verbose_name_plural = "Galleries"
@@ -91,8 +93,10 @@ class GalleryElement(Base):
     credit = models.CharField(max_length=255,blank=True,null=True)
     description = models.TextField(blank=True,null=True)
     sort_by = models.IntegerField(blank=True,null=True,default='0')
-    created_at = models.DateTimeField(blank=True,null=True,auto_now_add=True)
-    updated_at = models.DateTimeField(blank=True,null=True,auto_now=True)
+    # Provided by localhost.core.models.Base
+    #created_at = models.DateTimeField(blank=True,null=True,auto_now_add=True)
+    #updated_at = models.DateTimeField(blank=True,null=True,auto_now=True)
+    # Provided by localhost.core.models.Base
 
     class Meta:
         verbose_name = "Gallery element"
@@ -113,8 +117,9 @@ class ResizedImage(Base):
     image_url = models.CharField(max_length=255,blank=True,null=True)
     image_width = models.IntegerField(blank=True,null=True,default='0')
     image_height = models.IntegerField(blank=True,null=True,default='0')
-    created_at = models.DateTimeField(blank=True,null=True,auto_now_add=True)
-    updated_at = models.DateTimeField(blank=True,null=True,auto_now=True)
+    # Provided by localhost.core.models.Base
+    #created_at = models.DateTimeField(blank=True,null=True,auto_now_add=True)
+    #updated_at = models.DateTimeField(blank=True,null=True,auto_now=True)
 
     class Meta:
         verbose_name = "Resized image"
