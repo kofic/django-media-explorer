@@ -2,6 +2,8 @@
 
 A Django application to manage your images, video links, embeds and create slideshows.
 
+This fork is meant to work with the LocalHost platform.
+
 **Table of Contents**
 
 - [Installation](#installation)
