@@ -6,6 +6,10 @@ from rest_framework import views, response, status, parsers
 from localhost.conf.settings import settings
 from django.db.models import Q
 
+from localhost.core.helpers import Helper
+helper = Helper()
+
+
 class ElementSerializer(serializers.ModelSerializer):
     class Meta:
         model = Element
@@ -30,6 +34,11 @@ class ElementList(views.APIView):
         #TODO - move to helper so you don't maintain same code twice
         query = None
         and_query = Q(site_id=self.request.session.get("site_id", settings.SITE_ID))
+        user = helper.get_user(self.request.user)
+        if not helper.is_site_superuser(user) \
+                and not helper.is_site_staff(user):
+            and_query.add(Q(created_by=user), Q.AND)
+
         or_query = None
         type = self.request.QUERY_PARAMS.get('type', None)
         filter = self.request.QUERY_PARAMS.get('filter', None)
@@ -89,8 +98,13 @@ class ElementList(views.APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # TODO - is request.DATA mutable? will this work?
         request.DATA["site_id"] = request.session.get("site_id", settings.SITE_ID)
+
+        user = helper.get_user(request.user)
+        if not helper.is_site_superuser(user) \
+                and not helper.is_site_staff(user):
+            request.DATA["created_by_id"] = user.id
+            print "SETTING DATA: ", request.DATA
 
         serializer = ElementSerializer(data=request.DATA)
         if serializer.is_valid():
@@ -116,9 +130,21 @@ class ElementDetail(views.APIView):
     """
     queryset = Element.objects.none()
 
-    def get_object(self, pk, site_id):
+    def get_object(self, pk, request):
+        user = helper.get_user(request.user)
+        site_id = request.session.get("site_id", settings.SITE_ID)
+
+        fields = {}
+        fields["pk"] = pk
+        fields["site_id"] = site_id
+
+        if not helper.is_site_superuser(user) \
+                and not helper.is_site_staff(user):
+            fields["created_by_id"] = user.id
+
         try:
-            return Element.objects.get(pk=pk, site_id=site_id)
+            #return Element.objects.get(pk=pk, site_id=site_id)
+            return Element.objects.get(**fields)
         except Element.DoesNotExist:
             raise Http404
 
@@ -131,8 +157,12 @@ class ElementDetail(views.APIView):
 
         try:
 
-            # TODO - is request.DATA mutable? will this work?
             request.DATA["site_id"] = request.session.get("site_id", settings.SITE_ID)
+            user = helper.get_user(request.user)
+            if not helper.is_site_superuser(user) \
+                    and not helper.is_site_staff(user):
+                request.DATA["created_by_id"] = user.id
+
 
             element = self.get_object(pk, request.session.get("site_id", settings.SITE_ID))
             serializer = ElementSerializer(element, data=request.DATA)
@@ -227,9 +257,13 @@ class GalleryList(views.APIView):
 
     def get_queryset(self, id=None):
         #NOTE: Code below must match GalleryStatsView.get
-        #TODO - move to helper so you don't maintain same code twice
         query = None
         and_query = Q(site_id=self.request.session.get("site_id", settings.SITE_ID))
+        user = helper.get_user(self.request.user)
+        if not helper.is_site_superuser(user) \
+                and not helper.is_site_staff(user):
+            and_query.add(Q(created_by=user), Q.AND)
+
         or_query = None
         filter = self.request.QUERY_PARAMS.get('filter', None)
         sort = self.request.QUERY_PARAMS.get('sort', "created_at")
@@ -269,15 +303,20 @@ class GalleryList(views.APIView):
         return queryset
 
     def get(self, request, format=None):
-        #Don't use self.queryset - it's cached
+        # Don't use self.queryset - it's cached
         #elements = self.queryset
         elements = self.get_queryset()
         serializer = GallerySerializer(elements, many=True)
         return response.Response(serializer.data)
 
     def post(self, request, format=None):
-        # TODO - is request.DATA mutable? will this work?
         request.DATA["site_id"] = request.session.get("site_id", settings.SITE_ID)
+
+        user = helper.get_user(request.user)
+        if not helper.is_site_superuser(user) \
+                and not helper.is_site_staff(user):
+            request.DATA["created_by_id"] = user.id
+
         serializer = GallerySerializer(data=request.DATA)
         if serializer.is_valid():
             serializer.save()
@@ -332,19 +371,31 @@ class GalleryDetail(views.APIView):
     """
     queryset = Gallery.objects.none()
 
-    def get_object(self, pk, site_id):
+    def get_object(self, pk, request):
+        user = helper.get_user(request.user)
+        site_id = request.session.get("site_id", settings.SITE_ID)
+
+        fields = {}
+        fields["pk"] = pk
+        fields["site_id"] = site_id
+
+        if not helper.is_site_superuser(user) \
+                and not helper.is_site_staff(user):
+            fields["created_by_id"] = user.id
+
         try:
-            return Gallery.objects.get(pk=pk, site_id=site_id)
+            #return Gallery.objects.get(pk=pk, site_id=site_id)
+            return Gallery.objects.get(**fields)
         except Gallery.DoesNotExist:
             raise Http404
 
     def get(self, request, pk, format=None):
-        gallery = self.get_object(pk, request.session.get("site_id", settings.SITE_ID))
+        gallery = self.get_object(pk, request)
         serializer = GallerySerializer(gallery)
         return response.Response(serializer.data)
 
     def put(self, request, pk, format=None):
-        gallery = self.get_object(pk, request.session.get("site_id", settings.SITE_ID))
+        gallery = self.get_object(pk, request)
         serializer = GallerySerializer(gallery, data=request.DATA)
         if serializer.is_valid():
             serializer.save()
@@ -401,7 +452,7 @@ class GalleryDetail(views.APIView):
         return response.Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, pk, format=None):
-        element = self.get_object(pk, request.session.get("site_id", settings.SITE_ID))
+        element = self.get_object(pk, request)
         element.delete()
         return response.Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -411,20 +462,38 @@ class GalleryElementDetail(views.APIView):
     """
     queryset = GalleryElement.objects.none()
 
-    def get_object(self, pk, site_id):
+    def get_object(self, pk, request):
+        user = helper.get_user(request.user)
+        site_id = request.session.get("site_id", settings.SITE_ID)
+
+        fields = {}
+        fields["pk"] = pk
+        fields["site_id"] = site_id
+
+        if not helper.is_site_superuser(user) \
+                and not helper.is_site_staff(user):
+            fields["created_by_id"] = user.id
+
         try:
-            return GalleryElement.objects.get(pk=pk, site_id=site_id)
+            #return GalleryElement.objects.get(pk=pk, site_id=site_id)
+            return GalleryElement.objects.get(**fields)
         except GalleryElement.DoesNotExist:
             raise Http404
 
     def get(self, request, pk, format=None):
-        element = self.get_object(pk, request.session.get("site_id", settings.SITE_ID))
+        element = self.get_object(pk, request)
         serializer = GalleryElementSerializer(element)
         return response.Response(serializer.data)
 
     def put(self, request, pk, format=None):
-        element = self.get_object(pk, request.session.get("site_id", settings.SITE_ID))
+        element = self.get_object(pk, request)
         request.DATA["site_id"] = request.session.get("site_id", settings.SITE_ID)
+
+        user = helper.get_user(request.user)
+        if not helper.is_site_superuser(user) \
+                and not helper.is_site_staff(user):
+            request.DATA["created_by_id"] = user.id
+
         serializer = GalleryElementSerializer(element, data=request.DATA)
         if serializer.is_valid():
             serializer.save()
@@ -432,7 +501,7 @@ class GalleryElementDetail(views.APIView):
         return response.Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, pk, format=None):
-        element = self.get_object(pk, request.session.get("site_id", settings.SITE_ID))
+        element = self.get_object(pk, request)
         element.delete()
         return response.Response(status=status.HTTP_204_NO_CONTENT)
 
