@@ -284,13 +284,29 @@ class MediaImageField(FileField):
         """
         Save image into Element model
         """
-        if self.new_upload and \
-                type(instance.__dict__[self.name]) in [str,unicode]:
+        from django.db.models.fields.files import FieldFile
+
+        process = False
+
+        if self.new_upload and type(instance.__dict__[self.name]) in [str,unicode]:
+            process = True
+
+        if type(instance.__dict__[self.name]) is FieldFile:
+            if not Element.objects.filter(original_local_path=instance.__dict__[self.name].url).exists() and not Element.objects.filter(local_path=instance.__dict__[self.name].url).exists():
+                process = True
+
+        if process:
             data = {}
             data["image"] = instance.__dict__[self.name]
             element = Element()
             element.__dict__.update(data)
             element.save()
+            print "NEW ELEMENT ID: ", element.id
+            if not element.local_path:
+                instance.__dict__[self.name] = element.image_url
+                instance.save()
+
+            # TODO - update instance with new path
 
     #def on_post_delete_callback(self, instance, force=False, *args, **kwargs):
     #    """
