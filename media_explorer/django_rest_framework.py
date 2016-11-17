@@ -204,6 +204,10 @@ class ResizedImageSerializer(serializers.ModelSerializer):
         model = ResizedImage
         fields = ('id','site_id','created_by_id','image','file_name','size','image_url','image_width','image_height','created_at')
 
+    def create(self, validated_data):
+        return ResizedImage.objects.create(**validated_data)
+
+
 class ResizedImageList(views.APIView):
     """
     List all Resized images when given an Element
@@ -242,6 +246,7 @@ class GalleryElementSerializer(serializers.ModelSerializer):
         model = GalleryElement
         fields = ('id','site_id','created_by_id','type','name','credit','description','thumbnail_image_url','image_url','video_url','video_embed','sort_by','created_at')
 
+
 class GallerySerializer(serializers.ModelSerializer):
     site_id = serializers.IntegerField(write_only=True, allow_null=True)
     created_by_id = serializers.IntegerField(write_only=True, allow_null=True, required=False)
@@ -258,6 +263,10 @@ class GallerySerializer(serializers.ModelSerializer):
         if not value:
             raise serializers.ValidationError("Provide a gallery name")
         return value
+
+    def create(self, validated_data):
+        return Gallery.objects.create(**validated_data)
+
 
 class GalleryList(views.APIView):
     """
@@ -491,12 +500,12 @@ class GalleryElementDetail(views.APIView):
             raise Http404
 
     def get(self, request, pk, format=None):
-        element = self.get_object(pk, request)
-        serializer = GalleryElementSerializer(element)
+        galleryElement = self.get_object(pk, request)
+        serializer = GalleryElementSerializer(galleryElement)
         return response.Response(serializer.data)
 
     def put(self, request, pk, format=None):
-        element = self.get_object(pk, request)
+        galleryElement = self.get_object(pk, request)
         request.DATA["site_id"] = request.session.get("site_id", settings.SITE_ID)
 
         user = helper.get_user(request.user)
@@ -504,7 +513,7 @@ class GalleryElementDetail(views.APIView):
                 and not user.is_site_staff():
             request.DATA["created_by_id"] = user.id
 
-        serializer = GalleryElementSerializer(element, data=request.DATA)
+        serializer = GalleryElementSerializer(galleryElement, data=request.DATA)
         if serializer.is_valid():
             serializer.save()
             return response.Response(serializer.data)
