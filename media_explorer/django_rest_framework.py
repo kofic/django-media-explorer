@@ -11,10 +11,15 @@ helper = Helper()
 
 
 class ElementSerializer(serializers.ModelSerializer):
+    site_id = serializers.IntegerField(write_only=True, allow_null=True)
+    created_by_id = serializers.IntegerField(write_only=True, allow_null=True, required=False)
+
     class Meta:
         model = Element
-        #fields = ('id','site_id','name','file_name','type','credit','description','thumbnail_image_url','image_url','video_url','video_embed','created_at')
-        fields = ('id','name','file_name','type','credit','description','thumbnail_image_url','image_url','video_url','video_embed','created_at')
+        fields = ('id','site_id','created_by_id','name','file_name','type','credit','description','thumbnail_image_url','image_url','video_url','video_embed','created_at')
+
+    def create(self, validated_data):
+        return Element.objects.create(**validated_data)
 
     def update(self, instance, validated_data):
         for field in validated_data:
@@ -35,8 +40,8 @@ class ElementList(views.APIView):
         query = None
         and_query = Q(site_id=self.request.session.get("site_id", settings.SITE_ID))
         user = helper.get_user(self.request.user)
-        if not helper.is_site_superuser(user) \
-                and not helper.is_site_staff(user):
+        if not user.is_site_superuser() \
+                and not user.is_site_staff():
             and_query.add(Q(created_by=user), Q.AND)
 
         or_query = None
@@ -101,15 +106,15 @@ class ElementList(views.APIView):
         request.DATA["site_id"] = request.session.get("site_id", settings.SITE_ID)
 
         user = helper.get_user(request.user)
-        if not helper.is_site_superuser(user) \
-                and not helper.is_site_staff(user):
+        if not user.is_site_superuser() \
+                and not user.is_site_staff():
             request.DATA["created_by_id"] = user.id
-            print "SETTING DATA: ", request.DATA
 
         serializer = ElementSerializer(data=request.DATA)
         if serializer.is_valid():
-            serializer.save()
-            element = Element.objects.get(id=serializer.data["id"])
+            #serializer.save()
+            #element = Element.objects.get(id=serializer.data["id"])
+            element = serializer.save()
             if request.FILES:
                 if "image" in request.FILES:
                     element.image = request.FILES['image']
@@ -138,8 +143,8 @@ class ElementDetail(views.APIView):
         fields["pk"] = pk
         fields["site_id"] = site_id
 
-        if not helper.is_site_superuser(user) \
-                and not helper.is_site_staff(user):
+        if not user.is_site_superuser() \
+                and not user.is_site_staff():
             fields["created_by_id"] = user.id
 
         try:
@@ -159,10 +164,9 @@ class ElementDetail(views.APIView):
 
             request.DATA["site_id"] = request.session.get("site_id", settings.SITE_ID)
             user = helper.get_user(request.user)
-            if not helper.is_site_superuser(user) \
-                    and not helper.is_site_staff(user):
+            if not user.is_site_superuser() \
+                    and not user.is_site_staff():
                 request.DATA["created_by_id"] = user.id
-
 
             element = self.get_object(pk, request.session.get("site_id", settings.SITE_ID))
             serializer = ElementSerializer(element, data=request.DATA)
@@ -193,10 +197,12 @@ class ElementDetail(views.APIView):
         return response.Response(status=status.HTTP_204_NO_CONTENT)
 
 class ResizedImageSerializer(serializers.ModelSerializer):
+    site_id = serializers.IntegerField(write_only=True, allow_null=True)
+    created_by_id = serializers.IntegerField(write_only=True, allow_null=True, required=False)
+
     class Meta:
         model = ResizedImage
-        #fields = ('id','site_id','image','file_name','size','image_url','image_width','image_height','created_at')
-        fields = ('id','image','file_name','size','image_url','image_width','image_height','created_at')
+        fields = ('id','site_id','created_by_id','image','file_name','size','image_url','image_width','image_height','created_at')
 
 class ResizedImageList(views.APIView):
     """
@@ -219,6 +225,9 @@ class ResizedImageList(views.APIView):
         return response.Response(serializer.data)
 
 class GalleryElementSerializer(serializers.ModelSerializer):
+    site_id = serializers.IntegerField(write_only=True, allow_null=True)
+    created_by_id = serializers.IntegerField(write_only=True, allow_null=True, required=False)
+
     id = serializers.ReadOnlyField(source='element.id')
     type = serializers.ReadOnlyField(source='element.type')
     name = serializers.ReadOnlyField(source='element.name')
@@ -231,15 +240,16 @@ class GalleryElementSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = GalleryElement
-        #fields = ('id','site_id','type','name','credit','description','thumbnail_image_url','image_url','video_url','video_embed','sort_by','created_at')
-        fields = ('id','type','name','credit','description','thumbnail_image_url','image_url','video_url','video_embed','sort_by','created_at')
+        fields = ('id','site_id','created_by_id','type','name','credit','description','thumbnail_image_url','image_url','video_url','video_embed','sort_by','created_at')
 
 class GallerySerializer(serializers.ModelSerializer):
+    site_id = serializers.IntegerField(write_only=True, allow_null=True)
+    created_by_id = serializers.IntegerField(write_only=True, allow_null=True, required=False)
+
     elements = GalleryElementSerializer(source='galleryelement_set', many=True, required=False, read_only=True)
     class Meta:
         model = Gallery
-        #fields = ('id','site_id','name','description','thumbnail_image_url','elements','created_at')
-        fields = ('id','name','description','thumbnail_image_url','elements','created_at')
+        fields = ('id','site_id','created_by_id','name','description','thumbnail_image_url','elements','created_at')
 
     def validate_name(self, value):
         """
@@ -260,8 +270,8 @@ class GalleryList(views.APIView):
         query = None
         and_query = Q(site_id=self.request.session.get("site_id", settings.SITE_ID))
         user = helper.get_user(self.request.user)
-        if not helper.is_site_superuser(user) \
-                and not helper.is_site_staff(user):
+        if not user.is_site_superuser() \
+                and not user.is_site_staff():
             and_query.add(Q(created_by=user), Q.AND)
 
         or_query = None
@@ -313,8 +323,8 @@ class GalleryList(views.APIView):
         request.DATA["site_id"] = request.session.get("site_id", settings.SITE_ID)
 
         user = helper.get_user(request.user)
-        if not helper.is_site_superuser(user) \
-                and not helper.is_site_staff(user):
+        if not user.is_site_superuser() \
+                and not user.is_site_staff():
             request.DATA["created_by_id"] = user.id
 
         serializer = GallerySerializer(data=request.DATA)
@@ -379,8 +389,8 @@ class GalleryDetail(views.APIView):
         fields["pk"] = pk
         fields["site_id"] = site_id
 
-        if not helper.is_site_superuser(user) \
-                and not helper.is_site_staff(user):
+        if not user.is_site_superuser() \
+                and not user.is_site_staff():
             fields["created_by_id"] = user.id
 
         try:
@@ -470,8 +480,8 @@ class GalleryElementDetail(views.APIView):
         fields["pk"] = pk
         fields["site_id"] = site_id
 
-        if not helper.is_site_superuser(user) \
-                and not helper.is_site_staff(user):
+        if not user.is_site_superuser() \
+                and not user.is_site_staff():
             fields["created_by_id"] = user.id
 
         try:
@@ -490,8 +500,8 @@ class GalleryElementDetail(views.APIView):
         request.DATA["site_id"] = request.session.get("site_id", settings.SITE_ID)
 
         user = helper.get_user(request.user)
-        if not helper.is_site_superuser(user) \
-                and not helper.is_site_staff(user):
+        if not user.is_site_superuser() \
+                and not user.is_site_staff():
             request.DATA["created_by_id"] = user.id
 
         serializer = GalleryElementSerializer(element, data=request.DATA)
