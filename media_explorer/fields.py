@@ -205,7 +205,6 @@ class RichTextField(models.TextField):
             return value
 
         return self.do_validation(parse_richtext(value))
-    
 
     def get_prep_value(self, value):
         if value: return unicode(value)
