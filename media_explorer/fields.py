@@ -302,8 +302,9 @@ class MediaImageField(FileField):
             element.__dict__.update(data)
             element.save()
 
-            # update instance with new path if local_path has changed
+            # update instance with new path if saved to S3
             if not element.local_path:
+                print "HEY: ", element.image, element.image.url
                 instance.__dict__[self.name] = element.image
                 instance.save()
 

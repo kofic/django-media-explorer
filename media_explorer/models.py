@@ -8,6 +8,8 @@ from django.db.models import signals
 from localhost.core.models import Base, User
 from localhost.conf.settings import settings
 
+from .storage import DMEFileSystemStorage
+
 from .helpers import S3Helper
 s3_helper = S3Helper()
 
@@ -25,7 +27,7 @@ class Element(Base):
     original_file_name = models.CharField(max_length=150,blank=True,null=True)
     credit = models.CharField(max_length=255,blank=True,null=True)
     description = models.TextField(blank=True,null=True)
-    image = models.ImageField(blank=True,null=True,max_length=255,upload_to="images/")
+    image = models.ImageField(blank=True,null=True,max_length=255,upload_to="images/", storage=DMEFileSystemStorage())
     s3_bucket = models.CharField(max_length=255,blank=True,null=True)
     s3_path = models.CharField(max_length=255,blank=True,null=True)
     local_path = models.CharField(max_length=255,blank=True,null=True)
@@ -36,7 +38,7 @@ class Element(Base):
     video_url = models.CharField(max_length=255,blank=True,null=True)
     video_embed = models.TextField(blank=True,null=True)
     manual_embed_code = models.BooleanField(_("Manually enter video embed code"), default=False)
-    thumbnail_image = models.ImageField(blank=True,null=True,max_length=255,upload_to="images/")
+    thumbnail_image = models.ImageField(blank=True,null=True,max_length=255,upload_to="images/", storage=DMEFileSystemStorage())
     thumbnail_s3_bucket = models.CharField(max_length=255,blank=True,null=True)
     thumbnail_s3_path = models.CharField(max_length=255,blank=True,null=True)
     thumbnail_local_path = models.CharField(max_length=255,blank=True,null=True)
@@ -72,7 +74,7 @@ class Gallery(Base):
     name = models.CharField(max_length=255)
     short_code = models.CharField(max_length=100,blank=True,null=True)
     description = models.TextField(blank=True,null=True)
-    thumbnail_image = models.ImageField(blank=True,null=True,max_length=255,upload_to="images/")
+    thumbnail_image = models.ImageField(blank=True,null=True,max_length=255,upload_to="images/", storage=DMEFileSystemStorage())
     thumbnail_image_url = models.CharField(max_length=255,blank=True,null=True)
     elements = models.ManyToManyField(Element, through="GalleryElement")
     # Provided by localhost.core.models.Base
