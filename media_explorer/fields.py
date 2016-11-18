@@ -291,7 +291,7 @@ class MediaImageField(FileField):
         if self.new_upload and type(instance.__dict__[self.name]) in [str,unicode]:
             process = True
 
-        if type(instance.__dict__[self.name]) is FieldFile:
+        if type(instance.__dict__[self.name]) is FieldFile and instance.__dict__[self.name]:
             if not Element.objects.filter(original_local_path=instance.__dict__[self.name].url).exists() and not Element.objects.filter(local_path=instance.__dict__[self.name].url).exists():
                 process = True
 
