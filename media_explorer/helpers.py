@@ -110,12 +110,12 @@ class S3Helper(object):
                         extra_args=self.get_s3_headers(s3_path)
                         )
 
-                saved_to_s3 = True
-                s3_url = self.get_s3_url(s3_path)
+                thumbnail_saved_to_s3 = True
+                thumbnail_s3_url = self.get_s3_url(s3_path)
 
                 instance.thumbnail_s3_path = s3_path
                 instance.thumbnail_s3_bucket = settings.DME_S3_BUCKET
-                instance.thumbnail_image_url = s3_url
+                instance.thumbnail_image_url = thumbnail_s3_url
                 instance.save()
 
             except Exception as e:
