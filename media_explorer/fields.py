@@ -302,12 +302,10 @@ class MediaImageField(FileField):
             element.__dict__.update(data)
             element.save()
 
-            # TODO - update instance with new path
-            #if not element.local_path:
-            #    #instance.__dict__[self.name] = element.image_url
-            #    del instance.__dict__[self.name]
-            #    instance.__dict__[self.name] = element.image_url
-            #    instance.save()
+            # update instance with new path if local_path has changed
+            if not element.local_path:
+                instance.__dict__[self.name] = element.image
+                instance.save()
 
     #def on_post_delete_callback(self, instance, force=False, *args, **kwargs):
     #    """
