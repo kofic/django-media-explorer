@@ -31,7 +31,6 @@ class Element(Base):
     s3_bucket = models.CharField(max_length=255,blank=True,null=True)
     s3_path = models.CharField(max_length=255,blank=True,null=True)
     local_path = models.CharField(max_length=255,blank=True,null=True)
-    original_local_path = models.CharField(max_length=255,blank=True,null=True)
     image_url = models.CharField(max_length=255,blank=True,null=True)
     image_width = models.IntegerField(blank=True,null=True,default='0')
     image_height = models.IntegerField(blank=True,null=True,default='0')
@@ -42,7 +41,6 @@ class Element(Base):
     thumbnail_s3_bucket = models.CharField(max_length=255,blank=True,null=True)
     thumbnail_s3_path = models.CharField(max_length=255,blank=True,null=True)
     thumbnail_local_path = models.CharField(max_length=255,blank=True,null=True)
-    original_thumbnail_local_path = models.CharField(max_length=255,blank=True,null=True)
     thumbnail_image_url = models.CharField(max_length=255,blank=True,null=True)
     thumbnail_image_width = models.IntegerField(blank=True,null=True,default='0')
     thumbnail_image_height = models.IntegerField(blank=True,null=True,default='0')
@@ -118,7 +116,6 @@ class ResizedImage(Base):
     s3_bucket = models.CharField(max_length=255,blank=True,null=True)
     s3_path = models.CharField(max_length=255,blank=True,null=True)
     local_path = models.CharField(max_length=255,blank=True,null=True)
-    original_local_path = models.CharField(max_length=255,blank=True,null=True)
     image_url = models.CharField(max_length=255,blank=True,null=True)
     image_width = models.IntegerField(blank=True,null=True,default='0')
     image_height = models.IntegerField(blank=True,null=True,default='0')
@@ -264,7 +261,6 @@ def element_post_save(sender, instance, created, **kwargs):
     if instance.image and not s3_helper.file_is_remote(instance.image.url):
         instance.image_url = instance.image.url
         instance.local_path = instance.image.url
-        instance.original_local_path = instance.image.url
       	instance.file_name = os.path.basename(str(instance.image_url))
       	if not instance.name:
             instance.name = instance.file_name
@@ -274,7 +270,6 @@ def element_post_save(sender, instance, created, **kwargs):
     if instance.thumbnail_image and not s3_helper.file_is_remote(instance.thumbnail_image.url):
         instance.thumbnail_image_url = instance.thumbnail_image.url
         instance.thumbnail_local_path = instance.thumbnail_image.url
-        instance.original_thumbnail_local_path = instance.thumbnail_image.url
 
     instance.save()
 
@@ -360,7 +355,6 @@ def resizedimage_post_save(sender, instance, created, **kwargs):
     #Set local path
     if instance.image_url and not s3_helper.file_is_remote(instance.image_url):
         instance.local_path = instance.image_url
-        instance.original_local_path = instance.image_url
         instance.save()
 
     #If S3 upload is set and image is local then upload to S3 then delete local
