@@ -42,7 +42,7 @@ class S3Helper(object):
         return s3_url
 
     def file_is_remote(self, url):
-        if "https:" in url \
+        if url and "https:" in url \
                 or "http:" in url \
                 or "http%3A" in url \
                 or "https%3A" in url:

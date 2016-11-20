@@ -5,6 +5,9 @@ from django.utils.translation import ugettext_lazy as _
 from media_explorer.models import Element, Gallery
 from media_explorer.forms import MediaFormField, RichTextFormField
 
+from .helpers import S3Helper
+s3_helper = S3Helper()
+
 from django.db.models import signals, FileField
 from django.forms import forms
 from django.template.defaultfilters import filesizeformat
@@ -233,11 +236,11 @@ class MediaImageField(FileField):
     def __init__(self, *args, **kwargs):
         """
         It is really hard to track the value change of a field
-        Currently using post_save to check self.new_upload
+        Currently using post_save to check Element.local_path
+        Assumption is if it's the same then its the same file
         """
         self.content_types = []
         self.max_upload_size = 0
-        self.new_upload = False
 
         #try:
         #    self.content_types = ["image/png","image/jpeg","image/jpg","image/bmp","image/gif","image/tiff","image/ief","image/g3fax"]
@@ -267,9 +270,6 @@ class MediaImageField(FileField):
         file = data.file
         content_type = getattr(file,"content_type",None)
 
-        if "django.core.files.uploadedfile.InMemoryUploadedFile" in str(type(file)):
-            self.new_upload = True
-
         if content_type and not content_type.lower().startswith("image/"):
             raise forms.ValidationError(_('The file you selected is not an image. Please select an image.'))
 
@@ -281,21 +281,8 @@ class MediaImageField(FileField):
 
     def contribute_to_class(self, cls, name, **kwargs):
         super(MediaImageField, self).contribute_to_class( cls, name, **kwargs)
-        #signals.pre_save.connect(self.on_pre_save_callback, sender=cls)
         signals.post_save.connect(self.on_post_save_callback, sender=cls)
         #signals.post_delete.connect(self.on_post_delete_callback, sender=cls)
-
-    # TODO - deprecate after we solve for initial_value
-    def on_pre_save_callback(self, *args, **kwargs):
-        #mediaImageField = super(MediaImageField, self).pre_save(*args, **kwargs)
-        if model_instance.__dict__[self.name]:
-            if type(model_instance.__dict__[self.name]) in [str, unicode]:
-                print "PRE SAVE URL IS: ", model_instance.__dict__[self.name]
-                self._intial_value = model_instance.__dict__[self.name]
-            elif hasattr(model_instance.__dict__[self.name], "url"):
-                print "This baby has 'url' attribute"
-                print "PRE SAVE URL2 IS: ", model_instance.__dict__[self.name].url
-                self._intial_value = model_instance.__dict__[self.name].url
 
     def on_post_save_callback(self, instance, force=False, *args, **kwargs):
         """
@@ -303,32 +290,17 @@ class MediaImageField(FileField):
         """
         from django.db.models.fields.files import FieldFile
 
-        has_changed = False
-
-        print "POST SAVE - PRE SAVE URL IS: ", self._initial_value
-        if type(instance.__dict__[self.name]) in [str, unicode]:
-            print "POST SAVE URL IS: ", instance.__dict__[self.name]
-            has_changed = not self._initial_value == instance.__dict__[self.name]
-            self._initial_value == instance.__dict__[self.name]
-        elif hasattr(instance.__dict__[self.name], "url"):
-            print "This baby has 'url' attribute"
-            print "POST SAVE URL2 IS: ", instance.__dict__[self.name].url
-            has_changed = not self._initial_value == instance.__dict__[self.name].url
-            self._initial_value == instance.__dict__[self.name].url
-
-        print "FIELD HAS CHANGED: ", has_changed
-
         process = False
+        image_url = None
 
-        if self.new_upload and type(instance.__dict__[self.name]) in [str,unicode]:
+        if type(instance.__dict__[self.name]) in [str, unicode]:
+            image_url = instance.__dict__[self.name]
+        elif hasattr(instance.__dict__[self.name], "url"):
+            image_url = instance.__dict__[self.name].url
+
+        if image_url and not s3_helper.file_is_remote(image_url) and \
+                not Element.objects.filter(local_path=image_url).exists():
             process = True
-
-        if type(instance.__dict__[self.name]) is FieldFile and instance.__dict__[self.name]:
-            if not Element.objects.filter(original_local_path=instance.__dict__[self.name].url).exists() and not Element.objects.filter(local_path=instance.__dict__[self.name].url).exists():
-                process = True
-
-        #print "BEFORE PROCESS: ", dir(self)
-        print "BEFORE PROCESS: ", self.model
 
         if process:
             data = {}
@@ -339,9 +311,10 @@ class MediaImageField(FileField):
 
             # update instance with new path if saved to S3
             if not element.local_path:
-                print "HEY: ", element.image, element.image.url
                 instance.__dict__[self.name] = element.image
+                signals.post_save.disconnect(self.on_post_save_callback, sender=instance)
                 instance.save()
+                signals.post_save.connect(self.on_post_save_callback, sender=instance)
 
     #def on_post_delete_callback(self, instance, force=False, *args, **kwargs):
     #    """
