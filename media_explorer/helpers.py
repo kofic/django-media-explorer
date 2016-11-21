@@ -1,8 +1,6 @@
 import os, re, traceback, mimetypes
 from localhost.conf.settings import settings
 
-from collections import OrderedDict
-
 try:
     #For Django version 1.8.13 and below
     from django.db.models import get_model
@@ -155,23 +153,27 @@ class ImageHelper(object):
         """Get resized images by url"""
         ResizedImage = get_model("media_explorer", "ResizedImage")
         images = ResizedImage.objects.filter(image__image_url=url, image__site_id=site_id)
-        image_dict = OrderedDict()
-        image_dict2 = {}
+        image_dict = {}
+        sorted_images = []
         for image in images:
             if image.image_width and image.image_height:
                 area = int(image.image_width) * int(image.image_height)
-                if area not in image_dict2:
-                    image_dict2[area] = []
-                image_dict2[area].append(image)
-        sorted_areas = sorted(image_dict2.keys())
+                if area not in image_dict:
+                    image_dict[area] = []
+                image_dict[area].append(image)
+        sorted_areas = sorted(image_dict.keys())
         for area in sorted_areas:
-            for resizedImage in image_dict2[area]:
-                image_dict[resizedImage.size] = {
-                    "width": resizedImage.image_width,
-                    "height": resizedImage.image_height,
-                    "url": resizedImage.image_url,
-                }
-        return image_dict
+            for resizedImage in image_dict[area]:
+                sorted_images.append(
+                    {
+                        "area": area,
+                        "size": resizedImage.size,
+                        "width": resizedImage.image_width,
+                        "height": resizedImage.image_height,
+                        "url": resizedImage.image_url,
+                    }
+                )
+        return sorted_images
 
     def resize(self, instance):
         rtn = {}
