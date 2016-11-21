@@ -1,6 +1,8 @@
 import os, re, traceback, mimetypes
 from localhost.conf.settings import settings
 
+from collections import OrderedDict
+
 try:
     #For Django version 1.8.13 and below
     from django.db.models import get_model
@@ -147,7 +149,30 @@ class S3Helper(object):
         return instance
 
 class ImageHelper(object):
-    """Image resize helper functions"""
+    """Image helper functions"""
+
+    def get_resized_images(self, url, site_id):
+        """Get resized images by url"""
+        ResizedImage = get_model("media_explorer", "ResizedImage")
+        images = ResizedImage.objects.filter(image__image_url=url, image__site_id=site_id)
+        image_dict = OrderedDict()
+        image_dict2 = {}
+        for image in images:
+            if image.image_width and image.image_height:
+                area = int(image.image_width) * int(image.image_height)
+                if area not in image_dict2:
+                    image_dict2[area] = []
+                image_dict2[area].append(image)
+        sorted_areas = sorted(image_dict2.keys())
+        for area in sorted_areas:
+            for resizedImage in image_dict2[area]:
+                image_dict[resizedImage.size] = {
+                    "width": resizedImage.image_width,
+                    "height": resizedImage.image_height,
+                    "url": resizedImage.image_url,
+                }
+        return image_dict
+
     def resize(self, instance):
         rtn = {}
         rtn["success"] = False
