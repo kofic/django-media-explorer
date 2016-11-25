@@ -285,7 +285,7 @@ def element_post_save(sender, instance, created, **kwargs):
                     if "thumbnail_url" in oembed:
                         instance.thumbnail_image_url = oembed["thumbnail_url"]
                     if "thumbnail_width" in oembed:
-                        instance.thumbnail_image_height = oembed["thumbnail_width"]
+                        instance.thumbnail_image_width = oembed["thumbnail_width"]
                     if "thumbnail_height" in oembed:
                         instance.thumbnail_image_height = oembed["thumbnail_height"]
                 
