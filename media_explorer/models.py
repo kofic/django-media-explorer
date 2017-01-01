@@ -119,6 +119,7 @@ class ResizedImage(Base):
     image_url = models.CharField(max_length=255,blank=True,null=True)
     image_width = models.IntegerField(blank=True,null=True,default='0')
     image_height = models.IntegerField(blank=True,null=True,default='0')
+    image_area = models.IntegerField(blank=True,null=True,default='0')
     # Provided by localhost.core.models.Base
     #created_at = models.DateTimeField(blank=True,null=True,auto_now_add=True)
     #updated_at = models.DateTimeField(blank=True,null=True,auto_now=True)
@@ -355,6 +356,10 @@ def resizedimage_post_save(sender, instance, created, **kwargs):
     #Set local path
     if instance.image_url and not s3_helper.file_is_remote(instance.image_url):
         instance.local_path = instance.image_url
+        instance.save()
+
+    if instance.image_width and instance.image_height:
+        instance.image_area = instance.image_width*instance.image_height
         instance.save()
 
     #If S3 upload is set and image is local then upload to S3 then delete local
