@@ -1,7 +1,7 @@
 import os, re, traceback, mimetypes
 from localhost.conf.settings import settings
 
-from django.http import HttpResponse, Http404
+from django.http import HttpResponse
 
 try:
     #For Django version 1.8.13 and below
@@ -61,10 +61,10 @@ class MediaServer(object):
             return response
 
         if not site_id:
-            raise Http404
+            return HttpResponse("Site id is required", status=404)
 
         if not element_id and not url:
-            raise Http404
+            return HttpResponse("Element id or URL is required", status=404)
 
         image = None
         ResizedImage = get_model("media_explorer", "ResizedImage")
@@ -77,7 +77,7 @@ class MediaServer(object):
             fields["image__image_url"] = url
 
         if not ResizedImage.objects.filter(**fields).exists():
-            raise Http404
+            return HttpResponse("Image not found", status=404)
 
         fields2 = fields.copy()
         if "x" in size:
@@ -89,7 +89,7 @@ class MediaServer(object):
             if ResizedImage.objects.filter(**fields2).exists():
                 image = ResizedImage.objects.filter(**fields2)[0]
             elif get_exact_size:
-                raise Http404
+                return HttpResponse("Image with exact size '%s' not found" % size, status=404)
 
             if not image:
                 size = "small"
@@ -111,4 +111,4 @@ class MediaServer(object):
         if image:
             return _http(image)
 
-        raise Http404
+        return HttpResponse("Image not found" % size, status=404)
