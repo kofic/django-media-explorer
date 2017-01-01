@@ -1,7 +1,9 @@
 import os, re, traceback, mimetypes
 from localhost.conf.settings import settings
 
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseRedirect
+from .helpers import S3Helper
+s3Helper = S3Helper()
 
 try:
     #For Django version 1.8.13 and below
@@ -32,27 +34,25 @@ class MediaServer(object):
         get_exact_size = kwargs.get("get_exact_size", False)
 
         def _http(file):
+            # TODO - account for nginx file proxies
             file_name = None
             file_obj = None
             file_size = 0
             content_type = None
-            if file.image.image:
+            try:
                 file_name = file.image.file_name
                 file_size = file.image.image.size
                 file_obj = file.image.image
                 content_type = mimetypes.guess_type(file_name)[0]
-            else:
-                # TODO - handle S3 files and local_path files
+            except Exception as e:
                 pass
 
-            # TODO - account for S3 files
-            #if s3_helper.file_is_remote(instance.image_url):
-            #settings.DME_UPLOAD_TO_S3 \
+            if not file_obj and file.image.image_url:
+                # TODO - handle private S3 files and non remote files
+                #if s3Helper.file_is_remote(file.image.image_url):
+                return HttpResponseRedirect(file.image.image_url)
 
-            # TODO - account for nginx file proxies
-
-            #wrapper = FileWrapper(file(filename))
-            #response['Content-Length'] = os.path.getsize(filename)
+            print file_name, file_obj
 
             wrapper = FileWrapper(file_obj)
             response = HttpResponse(wrapper, content_type=content_type)
