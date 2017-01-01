@@ -1,8 +1,7 @@
 import os, re, traceback, mimetypes
 from localhost.conf.settings import settings
 
-from django.http import HttpResponse
-from django.http import Http404
+from django.http import HttpResponse, Http404
 
 try:
     #For Django version 1.8.13 and below
