@@ -70,11 +70,17 @@ class S3Helper(object):
 
                 s3_path = self.get_s3_path(instance.local_path)
 
+                public = settings.get(
+                        "DME_S3_FILE_IS_PUBLIC", 
+                        instance.site_id, 
+                        use_django_default=True
+                        )
+
                 transfer.upload_file(
                         str(settings.PROJECT_ROOT + instance.local_path),
                         settings.DME_S3_BUCKET,
                         s3_path,
-                        extra_args=self.get_s3_headers(s3_path)
+                        extra_args=self.get_s3_headers(s3_path, public)
                         )
 
                 saved_to_s3 = True
@@ -103,11 +109,17 @@ class S3Helper(object):
 
                 s3_path = self.get_s3_path(instance.thumbnail_local_path)
 
+                public = settings.get(
+                        "DME_S3_FILE_IS_PUBLIC", 
+                        instance.site_id, 
+                        use_django_default=True
+                        )
+
                 transfer.upload_file(
                         str(settings.PROJECT_ROOT + instance.thumbnail_local_path),
                         settings.DME_S3_BUCKET,
                         s3_path,
-                        extra_args=self.get_s3_headers(s3_path)
+                        extra_args=self.get_s3_headers(s3_path, public)
                         )
 
                 thumbnail_saved_to_s3 = True
