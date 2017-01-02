@@ -1,4 +1,7 @@
-import os, re, traceback, mimetypes
+import os
+import mimetypes
+from boto3 import client as boto3Client
+
 from localhost.conf.settings import settings
 
 from django.http import HttpResponse, HttpResponseRedirect
@@ -48,8 +51,31 @@ class MediaServer(object):
             if not file_obj and resized_file.s3_path:
                 if resized_file.s3_is_public:
                     return HttpResponseRedirect(resized_file.image.image_url)
+                else:
 
-                # TODO - handle private S3 files
+                    timeout = settings.get( 
+                            "DME_S3_GENERATED_URL_TIMEOUT",
+                            resized_file.site_id,
+                            use_django_default=True
+                            )
+
+                    client = boto3Client(
+                            's3', 
+                            settings.DME_S3_REGION,
+                            aws_access_key_id=settings.DME_S3_ACCESS_KEY_ID,
+                            aws_secret_access_key=settings.DME_S3_SECRET_ACCESS_KEY
+                            )
+
+                    url = client.generate_presigned_url(
+                            'get_object', 
+                            Params = {
+                                'Bucket': resized_file.s3_bucket, 
+                                'Key': resized_file.s3_path
+                            }, 
+                            ExpiresIn=timeout
+                        )
+
+                    return HttpResponseRedirect(url)
 
             wrapper = FileWrapper(file_obj)
             response = HttpResponse(wrapper, content_type=content_type)
