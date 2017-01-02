@@ -70,23 +70,16 @@ class S3Helper(object):
 
                 s3_path = self.get_s3_path(instance.local_path)
 
-                is_public = settings.get(
-                        "DME_S3_FILE_IS_PUBLIC", 
-                        instance.site_id, 
-                        use_django_default=True
-                        )
-
                 transfer.upload_file(
                         str(settings.PROJECT_ROOT + instance.local_path),
                         settings.DME_S3_BUCKET,
                         s3_path,
-                        extra_args=self.get_s3_headers(s3_path, is_public)
+                        extra_args=self.get_s3_headers(s3_path, instance.s3_is_public)
                         )
 
                 saved_to_s3 = True
                 s3_url = self.get_s3_url(s3_path)
 
-                instance.s3_is_public = is_public
                 instance.s3_path = s3_path
                 instance.s3_bucket = settings.DME_S3_BUCKET
                 instance.image_url = s3_url
@@ -110,23 +103,16 @@ class S3Helper(object):
 
                 s3_path = self.get_s3_path(instance.thumbnail_local_path)
 
-                is_public = settings.get(
-                        "DME_S3_FILE_IS_PUBLIC", 
-                        instance.site_id, 
-                        use_django_default=True
-                        )
-
                 transfer.upload_file(
                         str(settings.PROJECT_ROOT + instance.thumbnail_local_path),
                         settings.DME_S3_BUCKET,
                         s3_path,
-                        extra_args=self.get_s3_headers(s3_path, is_public)
+                        extra_args=self.get_s3_headers(s3_path, instance.s3_is_public)
                         )
 
                 thumbnail_saved_to_s3 = True
                 thumbnail_s3_url = self.get_s3_url(s3_path)
 
-                instance.thumbnail_s3_is_public = is_public
                 instance.thumbnail_s3_path = s3_path
                 instance.thumbnail_s3_bucket = settings.DME_S3_BUCKET
                 instance.thumbnail_image_url = thumbnail_s3_url
@@ -290,6 +276,7 @@ class ImageHelper(object):
         ri.image_height = orig_cropped_height
         ri.image_width = orig_cropped_width
         ri.size = "orig_c"
+        ri.s3_is_public = instance.s3_is_public
         ri.save()
 
         image_cropped = Image.open(settings.PROJECT_ROOT + url_orig_cropped)
@@ -326,6 +313,7 @@ class ImageHelper(object):
                         ri.image_height = size_height
                         ri.image_width = size_width
                         ri.size = size
+                        ri.s3_is_public = instance.s3_is_public
                         ri.save()
 
                     if size_width in settings.DME_RESIZE_WIDTHS["retina_2x"]:
@@ -345,6 +333,7 @@ class ImageHelper(object):
                                 ri.image_height = retina_size_height
                                 ri.image_width = retina_size_width
                                 ri.size = size + "@2x"
+                                ri.s3_is_public = instance.s3_is_public
                                 ri.save()
 
 		#Handle non-cropped images (vertical, horizontal, square)
@@ -367,6 +356,7 @@ class ImageHelper(object):
                     ri.image_height = size_height
                     ri.image_width = size_width
                     ri.size = size
+                    ri.s3_is_public = instance.s3_is_public
                     ri.save()
 
 
@@ -382,6 +372,7 @@ class ImageHelper(object):
                     ri.image_height = retina_size_height
                     ri.image_width = retina_size_width
                     ri.size = size + "@2x"
+                    ri.s3_is_public = instance.s3_is_public
                     ri.save()
 
         #Now process thumbnail_image_url

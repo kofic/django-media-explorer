@@ -16,9 +16,15 @@ class ElementSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Element
-        fields = ('id','site_id','created_by_id','name','file_name','type','credit','description','thumbnail_image_url','image_url','video_url','video_embed','created_at')
+        fields = ('id','site_id','created_by_id','name','file_name','type','credit','description','thumbnail_image_url','image_url','video_url','video_embed','created_at','s3_is_public')
 
     def create(self, validated_data):
+        validated_data["s3_is_public"] = settings.get(
+                "DME_S3_FILE_IS_PUBLIC", 
+                validated_data["site_id"], 
+                use_django_default=True
+                )
+        print "CREATING WITH VALIDATED DATA: ", validated_data
         return Element.objects.create(**validated_data)
 
     def update(self, instance, validated_data):
