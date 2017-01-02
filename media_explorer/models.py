@@ -382,16 +382,23 @@ def resizedimage_post_save(sender, instance, created, **kwargs):
 
             s3_path = s3_helper.get_s3_path(instance.local_path)
 
+            is_public = settings.get(
+                    "DME_S3_FILE_IS_PUBLIC", 
+                    instance.site_id, 
+                    use_django_default=True
+                    )
+
             transfer.upload_file(
                     str(settings.PROJECT_ROOT + instance.image_url),
                     settings.DME_S3_BUCKET,
                     s3_path,
-                    extra_args=s3_helper.get_s3_headers(s3_path)
+                    extra_args=s3_helper.get_s3_headers(s3_path, is_public)
                     )
 
             saved_to_s3 = True
             s3_url = s3_helper.get_s3_url(s3_path)
 
+            instance.s3_is_public = is_public
             instance.s3_path = s3_path
             instance.s3_bucket = settings.DME_S3_BUCKET
             instance.image_url = s3_url
