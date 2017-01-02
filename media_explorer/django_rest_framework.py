@@ -24,7 +24,6 @@ class ElementSerializer(serializers.ModelSerializer):
                 validated_data["site_id"], 
                 use_django_default=True
                 )
-        print "CREATING WITH VALIDATED DATA: ", validated_data
         return Element.objects.create(**validated_data)
 
     def update(self, instance, validated_data):
