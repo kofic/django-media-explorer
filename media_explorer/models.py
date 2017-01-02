@@ -11,7 +11,7 @@ from localhost.conf.settings import settings
 from .storage import DMEFileSystemStorage
 
 from .helpers import S3Helper
-s3_helper = S3Helper()
+s3Helper = S3Helper()
 
 
 class Element(Base):
@@ -262,7 +262,7 @@ def element_post_save(sender, instance, created, **kwargs):
     if instance.video_url or instance.video_embed:
         instance.type = "video"
 
-    if instance.image and not s3_helper.file_is_remote(instance.image.url):
+    if instance.image and not s3Helper.file_is_remote(instance.image.url):
         instance.image_url = instance.image.url
         instance.local_path = instance.image.url
       	instance.file_name = os.path.basename(str(instance.image_url))
@@ -271,7 +271,7 @@ def element_post_save(sender, instance, created, **kwargs):
 
         instance.thumbnail_image = instance.image
 
-    if instance.thumbnail_image and not s3_helper.file_is_remote(instance.thumbnail_image.url):
+    if instance.thumbnail_image and not s3Helper.file_is_remote(instance.thumbnail_image.url):
         instance.thumbnail_image_url = instance.thumbnail_image.url
         instance.thumbnail_local_path = instance.thumbnail_image.url
 
@@ -309,13 +309,13 @@ def element_post_save(sender, instance, created, **kwargs):
                 if rtn["thumbnail_image_url"]:
                     instance.thumbnail_image = None
                     instance.thumbnail_image_url = rtn["thumbnail_image_url"]
-                    if not s3_helper.file_is_remote(instance.thumbnail_image_url):
+                    if not s3Helper.file_is_remote(instance.thumbnail_image_url):
                         instance.thumbnail_local_path = instance.thumbnail_image_url
                     instance.save()
 
                 #Now go through ResizedImages and delete local files
                 for r in ResizedImage.objects.filter(image=instance):
-                    if r.local_path and s3_helper.file_is_remote(r.image_url) \
+                    if r.local_path and s3Helper.file_is_remote(r.image_url) \
                             and not Element.objects.filter(local_path=r.local_path).exists() \
                             and not Element.objects.filter(thumbnail_local_path=r.local_path).exists():
                         try:
@@ -330,7 +330,7 @@ def element_post_save(sender, instance, created, **kwargs):
 
 
                 #Now upload Element to S3
-                instance = s3_helper.upload_element_to_s3(instance)
+                instance = s3Helper.upload_element_to_s3(instance)
 
             else:
                 print rtn["message"]
@@ -346,7 +346,7 @@ def element_post_save(sender, instance, created, **kwargs):
     #If S3 upload is set and image is local then upload to S3 then delete local
     if instance.image and settings.DME_UPLOAD_TO_S3 \
             and not settings.DME_RESIZE:
-        instance = s3_helper.upload_element_to_s3(instance)
+        instance = s3Helper.upload_element_to_s3(instance)
 
     #Reconnect signal
     signals.post_save.connect(element_post_save, sender=Element)
@@ -357,7 +357,7 @@ def resizedimage_post_save(sender, instance, created, **kwargs):
     signals.post_save.disconnect(resizedimage_post_save, sender=ResizedImage)
 
     #Set local path
-    if instance.image_url and not s3_helper.file_is_remote(instance.image_url):
+    if instance.image_url and not s3Helper.file_is_remote(instance.image_url):
         instance.local_path = instance.image_url
         instance.save()
 
@@ -368,7 +368,7 @@ def resizedimage_post_save(sender, instance, created, **kwargs):
     #If S3 upload is set and image is local then upload to S3 then delete local
     saved_to_s3 = False
     if instance.image_url and settings.DME_UPLOAD_TO_S3 \
-            and not s3_helper.file_is_remote(instance.image_url):
+            and not s3Helper.file_is_remote(instance.image_url):
         try:
             from boto3 import client as boto3Client
             from boto3.s3.transfer import S3Transfer
@@ -380,7 +380,7 @@ def resizedimage_post_save(sender, instance, created, **kwargs):
                     )
             transfer = S3Transfer(client)
 
-            s3_path = s3_helper.get_s3_path(instance.local_path)
+            s3_path = s3Helper.get_s3_path(instance.local_path)
 
             #is_public = settings.get(
             #        "DME_S3_FILE_IS_PUBLIC", 
@@ -392,11 +392,11 @@ def resizedimage_post_save(sender, instance, created, **kwargs):
                     str(settings.PROJECT_ROOT + instance.image_url),
                     settings.DME_S3_BUCKET,
                     s3_path,
-                    extra_args=s3_helper.get_s3_headers(s3_path, instance.s3_is_public)
+                    extra_args=s3Helper.get_s3_headers(s3_path, instance.s3_is_public)
                     )
 
             saved_to_s3 = True
-            s3_url = s3_helper.get_s3_url(s3_path)
+            s3_url = s3Helper.get_s3_url(s3_path)
 
             #instance.s3_is_public = is_public
             instance.s3_path = s3_path

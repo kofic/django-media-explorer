@@ -6,11 +6,12 @@ from media_explorer.models import Element, Gallery
 from media_explorer.forms import MediaFormField, RichTextFormField
 
 from .helpers import S3Helper
-s3_helper = S3Helper()
+s3Helper = S3Helper()
 
 from django.db.models import signals, FileField
 from django.forms import forms
 from django.template.defaultfilters import filesizeformat
+from localhost.conf.settings import settings
 
 
 def parse_media(string_or_obj):
@@ -223,6 +224,7 @@ class MediaImageField(FileField):
     """
     Forked from: https://djangosnippets.org/snippets/2206
     Same as FileField, but you can specify:
+        * s3_is_public - a boolean indicating if S3 file be public
         * max_upload_size - a number indicating the maximum file size allowed for upload.
             2.5MB - 2621440
             5MB - 5242880
@@ -239,25 +241,27 @@ class MediaImageField(FileField):
         Currently using post_save to check Element.local_path
         Assumption is if it's the same then its the same file
         """
-        self.content_types = []
         self.max_upload_size = 0
-
-        #try:
-        #    self.content_types = ["image/png","image/jpeg","image/jpg","image/bmp","image/gif","image/tiff","image/ief","image/g3fax"]
-        #except Exception as e:
-        #    pass
+        self.s3_is_public = None
 
         try:
             self.max_upload_size = kwargs.pop("max_upload_size")
         except Exception as e:
             pass
 
+        try:
+            self.s3_is_public = kwargs.pop("s3_is_public")
+        except Exception as e:
+            pass
+
+        if self.s3_is_public is None:
+            self.s3_is_public = settings.DME_S3_FILE_IS_PUBLIC
+
         super(MediaImageField, self).__init__(*args, **kwargs)
 
     def clean(self, *args, **kwargs):
         data = super(MediaImageField, self).clean(*args, **kwargs)
 
-        #TODO - if data.file.url starts with http:// or https:// then pass through
         try:
             #We are allowing this field to store local or remote files
             #If it is a remote file then skip the validation
@@ -281,40 +285,54 @@ class MediaImageField(FileField):
 
     def contribute_to_class(self, cls, name, **kwargs):
         super(MediaImageField, self).contribute_to_class( cls, name, **kwargs)
-        signals.post_save.connect(self.on_post_save_callback, sender=cls)
+        if self.s3_is_public:
+            signals.post_save.connect(self.on_post_save_public_s3_callback, sender=cls)
+        else:
+            signals.post_save.connect(self.on_post_save_private_s3_callback, sender=cls)
+        # TODO
         #signals.post_delete.connect(self.on_post_delete_callback, sender=cls)
 
-    def on_post_save_callback(self, instance, force=False, *args, **kwargs):
-        """
-        Save image into Element model
-        """
-        from django.db.models.fields.files import FieldFile
+    def on_post_save_private_s3_callback(self, instance, force=False, *args, **kwargs):
+        from .helpers import FieldHelper
+        fieldHelper = FieldHelper()
 
-        process = False
-        image_url = None
+        kwargs_dict = {}
+        kwargs_dict["field_name"] = self.name
+        kwargs_dict["instance"] = instance
+        kwargs_dict["force"] = force
+        kwargs_dict["s3_is_public"] = False
 
-        if type(instance.__dict__[self.name]) in [str, unicode]:
-            image_url = instance.__dict__[self.name]
-        elif hasattr(instance.__dict__[self.name], "url"):
-            image_url = instance.__dict__[self.name].url
+        processed, element = fieldHelper.on_mediaimagefield_post_save_callback(**kwargs_dict)
 
-        if image_url and not s3_helper.file_is_remote(image_url) and \
-                not Element.objects.filter(local_path=image_url).exists():
-            process = True
-
-        if process:
-            data = {}
-            data["image"] = instance.__dict__[self.name]
-            element = Element()
-            element.__dict__.update(data)
-            element.save()
-
+        if processed:
             # update instance with new path if saved to S3
             if not element.local_path:
                 instance.__dict__[self.name] = element.image
-                signals.post_save.disconnect(self.on_post_save_callback, sender=instance)
+                signals.post_save.disconnect(self.on_post_save_private_s3_callback, sender=instance)
                 instance.save()
-                signals.post_save.connect(self.on_post_save_callback, sender=instance)
+                signals.post_save.connect(self.on_post_save_private_s3_callback, sender=instance)
+
+    def on_post_save_public_s3_callback(self, instance, force=False, *args, **kwargs):
+        from .helpers import FieldHelper
+        fieldHelper = FieldHelper()
+
+        kwargs_dict = {}
+        kwargs_dict["field_name"] = self.name
+        kwargs_dict["instance"] = instance
+        kwargs_dict["force"] = force
+        kwargs_dict["s3_is_public"] = True
+
+        fieldHelper.on_mediaimagefield_post_save_callback(**kwargs_dict)
+
+        processed, element = fieldHelper.on_mediaimagefield_post_save_callback(**kwargs_dict)
+
+        if processed:
+            # update instance with new path if saved to S3
+            if not element.local_path:
+                instance.__dict__[self.name] = element.image
+                signals.post_save.disconnect(self.on_post_save_public_s3_callback, sender=instance)
+                instance.save()
+                signals.post_save.connect(self.on_post_save_public_s3_callback, sender=instance)
 
     #def on_post_delete_callback(self, instance, force=False, *args, **kwargs):
     #    """
