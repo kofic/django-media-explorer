@@ -46,7 +46,7 @@ class MediaServer(object):
                 pass
 
             if not file_obj and resized_file.s3_path:
-                if resized_file.s3_privacy == "public":
+                if resized_file.s3_is_public:
                     return HttpResponseRedirect(resized_file.image.image_url)
 
                 # TODO - handle private S3 files

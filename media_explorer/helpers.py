@@ -18,9 +18,9 @@ except ImportError:
 
 class S3Helper(object):
     """S3 helper functions"""
-    def get_s3_headers(self, url, public=True):
+    def get_s3_headers(self, url, is_public):
         headers = {}
-        if public:
+        if is_public:
             headers["ACL"] = "public-read"
         if mimetypes.guess_type(url)[0]:
             headers["ContentType"] = mimetypes.guess_type(url)[0]
@@ -70,7 +70,7 @@ class S3Helper(object):
 
                 s3_path = self.get_s3_path(instance.local_path)
 
-                public = settings.get(
+                is_public = settings.get(
                         "DME_S3_FILE_IS_PUBLIC", 
                         instance.site_id, 
                         use_django_default=True
@@ -80,12 +80,13 @@ class S3Helper(object):
                         str(settings.PROJECT_ROOT + instance.local_path),
                         settings.DME_S3_BUCKET,
                         s3_path,
-                        extra_args=self.get_s3_headers(s3_path, public)
+                        extra_args=self.get_s3_headers(s3_path, is_public)
                         )
 
                 saved_to_s3 = True
                 s3_url = self.get_s3_url(s3_path)
 
+                instance.s3_is_public = is_public
                 instance.s3_path = s3_path
                 instance.s3_bucket = settings.DME_S3_BUCKET
                 instance.image_url = s3_url
@@ -109,7 +110,7 @@ class S3Helper(object):
 
                 s3_path = self.get_s3_path(instance.thumbnail_local_path)
 
-                public = settings.get(
+                is_public = settings.get(
                         "DME_S3_FILE_IS_PUBLIC", 
                         instance.site_id, 
                         use_django_default=True
@@ -119,12 +120,13 @@ class S3Helper(object):
                         str(settings.PROJECT_ROOT + instance.thumbnail_local_path),
                         settings.DME_S3_BUCKET,
                         s3_path,
-                        extra_args=self.get_s3_headers(s3_path, public)
+                        extra_args=self.get_s3_headers(s3_path, is_public)
                         )
 
                 thumbnail_saved_to_s3 = True
                 thumbnail_s3_url = self.get_s3_url(s3_path)
 
+                instance.thumbnail_s3_is_public = is_public
                 instance.thumbnail_s3_path = s3_path
                 instance.thumbnail_s3_bucket = settings.DME_S3_BUCKET
                 instance.thumbnail_image_url = thumbnail_s3_url
