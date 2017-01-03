@@ -398,7 +398,6 @@ def resizedimage_post_save(sender, instance, created, **kwargs):
             saved_to_s3 = True
             s3_url = s3Helper.get_s3_url(s3_path)
 
-            #instance.s3_is_public = is_public
             instance.s3_path = s3_path
             instance.s3_bucket = settings.DME_S3_BUCKET
             instance.image_url = s3_url
