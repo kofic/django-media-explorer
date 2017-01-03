@@ -431,7 +431,6 @@ class FieldHelper(object):
         field_name = kwargs.pop("field_name")
         instance = kwargs.pop("instance")
         s3_is_public = kwargs.pop("s3_is_public")
-        print "FIELD NAME IS: ", field_name
 
         process = False
         image_url = None
