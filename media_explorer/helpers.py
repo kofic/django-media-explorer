@@ -181,34 +181,10 @@ class ImageHelper(object):
         rtn["message"] = ""
         rtn["thumbnail_image_url"] = None
 
+        ResizedImage = get_model("media_explorer","ResizedImage")
+
         url = instance.image_url
         full_path = settings.PROJECT_ROOT + "/" + url.strip("/")
-
-        try:
-            if os.path.exists(full_path):
-                image = Image.open(full_path)
-            else:
-                rtn["message"] = "File path does not exist"
-                return rtn
-        except Exception as e:
-            rtn["message"] = e.__str__()
-            return rtn
-
-        image_width, image_height = image.size
-        instance.image_width = image_width
-        instance.image_height = image_height
-        instance.save()
-
-        if not settings.DME_RESIZE:
-            rtn["message"] = "The image was not resized since settings.DME_RESIZE is set to False"
-            return rtn
-
-        #create DME_RESIZE_DIRECTORY directory
-        resize_dir = settings.PROJECT_ROOT + "/"
-        resize_dir += settings.MEDIA_URL.strip("/") +  "/"
-        resize_dir += settings.DME_RESIZE_DIRECTORY.strip("/")
-        if not os.path.exists(resize_dir): os.makedirs(resize_dir)
-        new_dir = "/" + settings.MEDIA_URL.strip("/") +  "/" + settings.DME_RESIZE_DIRECTORY.strip("/") + "/"
 
         #Clean file name
         file_name = os.path.basename(url)
@@ -226,6 +202,44 @@ class ImageHelper(object):
             extension = image.format.lower()
 
         extension = extension.lower()
+
+        try:
+            if os.path.exists(full_path):
+                image = Image.open(full_path)
+            else:
+                rtn["message"] = "File path does not exist"
+                return rtn
+        except Exception as e:
+            rtn["message"] = e.__str__()
+            return rtn
+
+        image_width, image_height = image.size
+        instance.image_width = image_width
+        instance.image_height = image_height
+        instance.save()
+
+        if not settings.DME_RESIZE:
+
+            # Even though DME_RESIZE = False - save the original image
+            defaults = {
+                "file_name": file_name + "_orig." + extension,
+                "image_url": instance.image_url,
+                "image_height": image_height,
+                "image_width": image_width,
+                "size": "orig",
+                "s3_is_public": instance.s3_is_public
+            }
+            ri, created = ResizedImage.objects.get_or_create(image=instance, site_id=instance.site_id, defaults=defaults)
+
+            rtn["message"] = "The image was not resized since settings.DME_RESIZE is set to False"
+            return rtn
+
+        #create DME_RESIZE_DIRECTORY directory
+        resize_dir = settings.PROJECT_ROOT + "/"
+        resize_dir += settings.MEDIA_URL.strip("/") +  "/"
+        resize_dir += settings.DME_RESIZE_DIRECTORY.strip("/")
+        if not os.path.exists(resize_dir): os.makedirs(resize_dir)
+        new_dir = "/" + settings.MEDIA_URL.strip("/") +  "/" + settings.DME_RESIZE_DIRECTORY.strip("/") + "/"
 
         url_orig_cropped = new_dir + file_name + "_orig_c." + extension
         orig_cropped_height = image_height
@@ -266,8 +280,6 @@ class ImageHelper(object):
         if not rtn_crop["success"]:
             return rtn_crop
 
-        ResizedImage = get_model("media_explorer","ResizedImage")
-
         #We will work from the aspect-ratio cropped out version
         ri = ResizedImage()
         ri.image = instance
@@ -276,6 +288,7 @@ class ImageHelper(object):
         ri.image_height = orig_cropped_height
         ri.image_width = orig_cropped_width
         ri.size = "orig_c"
+        ri.site_id = instance.site_id
         ri.s3_is_public = instance.s3_is_public
         ri.save()
 
@@ -313,6 +326,7 @@ class ImageHelper(object):
                         ri.image_height = size_height
                         ri.image_width = size_width
                         ri.size = size
+                        ri.site_id = instance.site_id
                         ri.s3_is_public = instance.s3_is_public
                         ri.save()
 
@@ -333,6 +347,7 @@ class ImageHelper(object):
                                 ri.image_height = retina_size_height
                                 ri.image_width = retina_size_width
                                 ri.size = size + "@2x"
+                                ri.site_id = instance.site_id
                                 ri.s3_is_public = instance.s3_is_public
                                 ri.save()
 
@@ -356,6 +371,7 @@ class ImageHelper(object):
                     ri.image_height = size_height
                     ri.image_width = size_width
                     ri.size = size
+                    ri.site_id = instance.site_id
                     ri.s3_is_public = instance.s3_is_public
                     ri.save()
 
@@ -372,6 +388,7 @@ class ImageHelper(object):
                     ri.image_height = retina_size_height
                     ri.image_width = retina_size_width
                     ri.size = size + "@2x"
+                    ri.site_id = instance.site_id
                     ri.s3_is_public = instance.s3_is_public
                     ri.save()
 
