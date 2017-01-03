@@ -293,18 +293,31 @@ class MediaImageField(FileField):
         #signals.post_delete.connect(self.on_post_delete_callback, sender=cls)
 
     def on_post_save_private_s3_callback(self, instance, force=False, *args, **kwargs):
-        from .helpers import FieldHelper
-        fieldHelper = FieldHelper()
+        """
+        Save image into Element model
+        """
+        from django.db.models.fields.files import FieldFile
 
-        kwargs_dict = {}
-        kwargs_dict["field_name"] = self.name
-        kwargs_dict["instance"] = instance
-        kwargs_dict["force"] = force
-        kwargs_dict["s3_is_public"] = False
+        process = False
+        image_url = None
 
-        processed, element = fieldHelper.on_mediaimagefield_post_save_callback(**kwargs_dict)
+        if type(instance.__dict__[self.name]) in [str, unicode]:
+            image_url = instance.__dict__[self.name]
+        elif hasattr(instance.__dict__[self.name], "url"):
+            image_url = instance.__dict__[self.name].url
 
-        if processed:
+        if image_url and not s3Helper.file_is_remote(image_url) and \
+                not Element.objects.filter(local_path=image_url).exists():
+            process = True
+
+        if process:
+            data = {}
+            data["image"] = instance.__dict__[self.name]
+            element = Element()
+            element.__dict__.update(data)
+            element.s3_is_public = False
+            element.save()
+
             # update instance with new path if saved to S3
             if not element.local_path:
                 instance.__dict__[self.name] = element.image
@@ -312,21 +325,33 @@ class MediaImageField(FileField):
                 instance.save()
                 signals.post_save.connect(self.on_post_save_private_s3_callback, sender=instance)
 
+
     def on_post_save_public_s3_callback(self, instance, force=False, *args, **kwargs):
-        from .helpers import FieldHelper
-        fieldHelper = FieldHelper()
+        """
+        Save image into Element model
+        """
+        from django.db.models.fields.files import FieldFile
 
-        kwargs_dict = {}
-        kwargs_dict["field_name"] = self.name
-        kwargs_dict["instance"] = instance
-        kwargs_dict["force"] = force
-        kwargs_dict["s3_is_public"] = True
+        process = False
+        image_url = None
 
-        fieldHelper.on_mediaimagefield_post_save_callback(**kwargs_dict)
+        if type(instance.__dict__[self.name]) in [str, unicode]:
+            image_url = instance.__dict__[self.name]
+        elif hasattr(instance.__dict__[self.name], "url"):
+            image_url = instance.__dict__[self.name].url
 
-        processed, element = fieldHelper.on_mediaimagefield_post_save_callback(**kwargs_dict)
+        if image_url and not s3Helper.file_is_remote(image_url) and \
+                not Element.objects.filter(local_path=image_url).exists():
+            process = True
 
-        if processed:
+        if process:
+            data = {}
+            data["image"] = instance.__dict__[self.name]
+            element = Element()
+            element.__dict__.update(data)
+            element.s3_is_public = True
+            element.save()
+
             # update instance with new path if saved to S3
             if not element.local_path:
                 instance.__dict__[self.name] = element.image
