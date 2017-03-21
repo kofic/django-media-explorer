@@ -20,17 +20,23 @@ class Element(Base):
     NOTE: if type=video you can still have a thumbnail_image
     """
 
-    TYPE_CHOICES = (('image','Image'),('video','Video'))
+    TYPE_CHOICES = (('image','Image'), ('video','Video'), ('file', 'File'))
 
     name = models.CharField(max_length=150,blank=True,null=True)
     file_name = models.CharField(max_length=150,blank=True,null=True)
     original_file_name = models.CharField(max_length=150,blank=True,null=True)
     credit = models.CharField(max_length=255,blank=True,null=True)
     description = models.TextField(blank=True,null=True)
-    image = models.ImageField(blank=True,null=True,max_length=255,upload_to="images/", storage=DMEFileSystemStorage())
+    file = models.FileField(blank=True, null=True, max_length=255, upload_to="files/", storage=DMEFileSystemStorage())
+    file_local_path = models.CharField(max_length=255,blank=True,null=True)
+    file_url = models.CharField(max_length=255,blank=True,null=True)
+    file_s3_bucket = models.CharField(max_length=255,blank=True,null=True)
+    file_s3_path = models.CharField(max_length=255,blank=True,null=True)
+    file_s3_is_public = models.BooleanField(_("S3 file is public"), default=True)
+    image = models.ImageField(blank=True, null=True, max_length=255, upload_to="images/", storage=DMEFileSystemStorage())
     s3_bucket = models.CharField(max_length=255,blank=True,null=True)
     s3_path = models.CharField(max_length=255,blank=True,null=True)
-    s3_is_public = models.BooleanField(_("S3 file is public"), default=True)
+    s3_is_public = models.BooleanField(_("S3 image is public"), default=True)
     local_path = models.CharField(max_length=255,blank=True,null=True)
     image_url = models.CharField(max_length=255,blank=True,null=True)
     image_width = models.IntegerField(blank=True,null=True,default='0')
@@ -41,7 +47,7 @@ class Element(Base):
     thumbnail_image = models.ImageField(blank=True,null=True,max_length=255,upload_to="images/", storage=DMEFileSystemStorage())
     thumbnail_s3_bucket = models.CharField(max_length=255,blank=True,null=True)
     thumbnail_s3_path = models.CharField(max_length=255,blank=True,null=True)
-    thumbnail_s3_is_public = models.BooleanField(_("S3 file is public"), default=True)
+    thumbnail_s3_is_public = models.BooleanField(_("S3 thumbnail is public"), default=True)
     thumbnail_local_path = models.CharField(max_length=255,blank=True,null=True)
     thumbnail_image_url = models.CharField(max_length=255,blank=True,null=True)
     thumbnail_image_width = models.IntegerField(blank=True,null=True,default='0')
@@ -59,10 +65,10 @@ class Element(Base):
 
     def save(self, *args, **kwargs):
         if not self.name:
-            if self.type == "image":
-                self.name = self.file_name
-            elif self.type == "video":
+            if self.type == "video":
                 self.name = self.video_url
+            else:
+                self.name = self.file_name
         super(Element, self).save(*args, **kwargs)
 
 
@@ -259,10 +265,18 @@ def element_post_save(sender, instance, created, **kwargs):
     #Disconnect signal here so we don't recurse when we save
     signals.post_save.disconnect(element_post_save, sender=Element)
 
-    if instance.video_url or instance.video_embed:
+    if instance.file and not s3Helper.file_is_remote(instance.file.url):
+        instance.type = "file"
+        instance.file_url = instance.file.url
+        instance.file_local_path = instance.file.url
+      	instance.file_name = os.path.basename(str(instance.file_url))
+      	if not instance.name:
+            instance.name = instance.file_name
+
+    elif instance.video_url or instance.video_embed:
         instance.type = "video"
 
-    if instance.image and not s3Helper.file_is_remote(instance.image.url):
+    elif instance.image and not s3Helper.file_is_remote(instance.image.url):
         instance.image_url = instance.image.url
         instance.local_path = instance.image.url
       	instance.file_name = os.path.basename(str(instance.image_url))
@@ -346,6 +360,10 @@ def element_post_save(sender, instance, created, **kwargs):
     #If S3 upload is set and image is local then upload to S3 then delete local
     if instance.image and settings.DME_UPLOAD_TO_S3 \
             and not settings.DME_RESIZE:
+        instance = s3Helper.upload_element_to_s3(instance)
+
+    #If S3 upload is set and file is local
+    if instance.file and settings.DME_UPLOAD_TO_S3:
         instance = s3Helper.upload_element_to_s3(instance)
 
     #Reconnect signal

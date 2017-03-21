@@ -365,3 +365,147 @@ class MediaImageField(FileField):
     #    Delete file from Element model
     #    """
     #    pass
+
+
+class MediaFileField(FileField):
+    """
+    Forked from: https://djangosnippets.org/snippets/2206
+    Same as FileField, but you can specify:
+        * s3_is_public - a boolean indicating if S3 file be public
+        * max_upload_size - a number indicating the maximum file size allowed for upload.
+            2.5MB - 2621440
+            5MB - 5242880
+            10MB - 10485760
+            20MB - 20971520
+            50MB - 5242880
+            100MB 104857600
+            250MB - 214958080
+            500MB - 429916160
+    """
+    def __init__(self, *args, **kwargs):
+        """
+        It is really hard to track the value change of a field
+        Currently using post_save to check Element.local_path
+        Assumption is if it's the same then its the same file
+        """
+        self.max_upload_size = 0
+        self.s3_is_public = None
+
+        try:
+            self.max_upload_size = kwargs.pop("max_upload_size")
+        except Exception as e:
+            pass
+
+        try:
+            self.s3_is_public = kwargs.pop("s3_is_public")
+        except Exception as e:
+            pass
+
+        if self.s3_is_public is None:
+            self.s3_is_public = settings.DME_S3_FILE_IS_PUBLIC
+
+        super(MediaFileField, self).__init__(*args, **kwargs)
+
+    def clean(self, *args, **kwargs):
+        data = super(MediaFileField, self).clean(*args, **kwargs)
+
+        try:
+            #We are allowing this field to store local or remote files
+            #If it is a remote file then skip the validation
+            if args[0].__dict__["name"].startswith("http://") \
+                    or args[0].__dict__["name"].startswith("https://"):
+                return data
+        except Exception as e:
+            pass
+
+        file = data.file
+        content_type = getattr(file,"content_type",None)
+
+        if self.max_upload_size > 0 and \
+                file.size > self.max_upload_size:
+            raise forms.ValidationError(_('Please keep filesize under %s. Current filesize %s') % (filesizeformat(self.max_upload_size), filesizeformat(file.size)))
+
+        return data
+
+    def contribute_to_class(self, cls, name, **kwargs):
+        super(MediaFileField, self).contribute_to_class( cls, name, **kwargs)
+        if self.s3_is_public:
+            signals.post_save.connect(self.on_post_save_public_s3_callback, sender=cls)
+        else:
+            signals.post_save.connect(self.on_post_save_private_s3_callback, sender=cls)
+        # TODO
+        #signals.post_delete.connect(self.on_post_delete_callback, sender=cls)
+
+    def on_post_save_private_s3_callback(self, instance, force=False, *args, **kwargs):
+        """
+        Save file into Element model
+        """
+        from django.db.models.fields.files import FieldFile
+
+        process = False
+        file_url = None
+
+        if type(instance.__dict__[self.name]) in [str, unicode]:
+            file_url = instance.__dict__[self.name]
+        elif hasattr(instance.__dict__[self.name], "url"):
+            file_url = instance.__dict__[self.name].url
+
+        if file_url and not s3Helper.file_is_remote(file_url) and \
+                not Element.objects.filter(local_path=file_url).exists():
+            process = True
+
+        if process:
+            data = {}
+            data["file"] = instance.__dict__[self.name]
+            element = Element()
+            element.__dict__.update(data)
+            element.s3_is_public = False
+            element.save()
+
+            # update instance with new path if saved to S3
+            if not element.local_path:
+                instance.__dict__[self.name] = element.file
+                signals.post_save.disconnect(self.on_post_save_private_s3_callback, sender=instance)
+                instance.save()
+                signals.post_save.connect(self.on_post_save_private_s3_callback, sender=instance)
+
+
+    def on_post_save_public_s3_callback(self, instance, force=False, *args, **kwargs):
+        """
+        Save file into Element model
+        """
+        from django.db.models.fields.files import FieldFile
+
+        process = False
+        file_url = None
+
+        if type(instance.__dict__[self.name]) in [str, unicode]:
+            file_url = instance.__dict__[self.name]
+        elif hasattr(instance.__dict__[self.name], "url"):
+            file_url = instance.__dict__[self.name].url
+
+        if file_url and not s3Helper.file_is_remote(file_url) and \
+                not Element.objects.filter(local_path=file_url).exists():
+            process = True
+
+        if process:
+            data = {}
+            data["file"] = instance.__dict__[self.name]
+            element = Element()
+            element.__dict__.update(data)
+            element.s3_is_public = True
+            element.save()
+
+            # update instance with new path if saved to S3
+            if not element.local_path:
+                instance.__dict__[self.name] = element.file
+                signals.post_save.disconnect(self.on_post_save_public_s3_callback, sender=instance)
+                instance.save()
+                signals.post_save.connect(self.on_post_save_public_s3_callback, sender=instance)
+
+    #def on_post_delete_callback(self, instance, force=False, *args, **kwargs):
+    #    """
+    #    TODO
+    #    Delete file from Element model
+    #    """
+    #    pass

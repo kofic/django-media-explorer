@@ -54,6 +54,39 @@ class S3Helper(object):
         if not settings.DME_UPLOAD_TO_S3:
             return instance
 
+        #If S3 upload is set and file is local then upload to S3 then delete local
+        file_saved_to_s3 = False
+        if instance.file_local_path and not self.file_is_remote(instance.file_url):
+            try:
+                from boto3 import client as boto3Client
+                from boto3.s3.transfer import S3Transfer
+                client = boto3Client(
+                        's3', 
+                        settings.DME_S3_REGION,
+                        aws_access_key_id=settings.DME_S3_ACCESS_KEY_ID,
+                        aws_secret_access_key=settings.DME_S3_SECRET_ACCESS_KEY
+                        )
+                transfer = S3Transfer(client)
+
+                file_s3_path = self.get_s3_path(instance.file_local_path)
+
+                transfer.upload_file(
+                        str(settings.PROJECT_ROOT + instance.file_local_path),
+                        settings.DME_S3_BUCKET,
+                        file_s3_path,
+                        extra_args=self.get_s3_headers(file_s3_path, instance.file_s3_is_public)
+                        )
+
+                file_saved_to_s3 = True
+                file_s3_url = self.get_s3_url(file_s3_path)
+
+                instance.file_s3_path = file_s3_path
+                instance.file_s3_bucket = settings.DME_S3_BUCKET
+                instance.file_url = file_s3_url
+                instance.save()
+            except Exception as e:
+                print traceback.format_exc()
+
         #If S3 upload is set and image is local then upload to S3 then delete local
         saved_to_s3 = False
         if instance.local_path and not self.file_is_remote(instance.image_url):
@@ -121,6 +154,17 @@ class S3Helper(object):
             except Exception as e:
                 print traceback.format_exc()
 
+
+        if file_saved_to_s3:
+            try:
+                if os.path.isfile(settings.PROJECT_ROOT + instance.file_local_path):
+                    os.remove(settings.PROJECT_ROOT + instance.file_local_path)
+                    instance.file = file_s3_url
+                    instance.file_local_path = None
+                    instance.save()
+
+            except:
+                print traceback.format_exc()
 
         if saved_to_s3:
             try:
