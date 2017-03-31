@@ -190,6 +190,7 @@ class S3Helper(object):
 
         return instance
 
+
 class ImageHelper(object):
     """Image helper functions"""
 
@@ -473,6 +474,69 @@ class ImageHelper(object):
             resized = image.resize((width,height),Image.ANTIALIAS).save(settings.PROJECT_ROOT + new_path)
         except Exception as e:
             rtn["message"] = e.__str__()
+            return rtn
+
+        rtn["success"] = True
+        return rtn
+
+
+class FileHelper(object):
+    """File helper functions"""
+
+    def save_file_from_url(self, url, model, file_field_name):
+        """
+        The file_field_name should be of type MediaImageField or MediaFileField
+        """
+        rtn = {}
+        rtn["success"] = False
+        rtn["message"] = ""
+
+        import requests
+        import tempfile
+        from django.core import files
+
+        try:
+            # Python 3
+            from urllib.parse import urlparse, parse_qs
+        except ImportError:
+            # Python 2
+            from urlparse import urlparse, parse_qs
+
+        url_obj = urlparse(url)
+        # Remove the query - some file url have query string (eg. signed urls)
+        url2 = url_obj._replace(query=None).geturl()
+
+        # Stream the file
+        resp = requests.get(url, stream=True)
+
+        # Was the request OK?
+        if resp.status_code != requests.codes.ok:
+            rtn["message"] = "The file '" + url2 + "' could not be downloaded."
+            rtn["message"] += "Status code: " + str(resp.status_code)
+            return rtn
+
+        try:
+            # Get the filename from the url, used for saving later
+            # Remember to use url2 (which has no query string)
+            file_name = url2.split('/')[-1]
+
+            # Create a temporary file
+            temp_file = tempfile.NamedTemporaryFile()
+
+            # Read the streamed file in sections
+            for block in resp.iter_content(1024 * 8):
+                # If no more file then stop
+                if not block:
+                    break
+                # Write file block to temporary file
+                temp_file.write(block)
+
+            file_field = getattr(model, file_field_name)
+            file_field.save(file_name, files.File(temp_file))
+
+        except Exception as e:
+            rtn["message"] = "The file '" + url2 + "' could not be downloaded. "
+            rtn["message"] += "ERROR: " + str(e)
             return rtn
 
         rtn["success"] = True
