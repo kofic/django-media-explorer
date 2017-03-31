@@ -285,6 +285,8 @@ class MediaImageField(FileField):
 
     def contribute_to_class(self, cls, name, **kwargs):
         super(MediaImageField, self).contribute_to_class( cls, name, **kwargs)
+        if not settings.DME_UPLOAD_TO_S3:
+            return
         if self.s3_is_public:
             signals.post_save.connect(self.on_post_save_public_s3_callback, sender=cls)
         else:
@@ -429,6 +431,8 @@ class MediaFileField(FileField):
 
     def contribute_to_class(self, cls, name, **kwargs):
         super(MediaFileField, self).contribute_to_class( cls, name, **kwargs)
+        if not settings.DME_UPLOAD_TO_S3:
+            return
         if self.s3_is_public:
             signals.post_save.connect(self.on_post_save_public_s3_callback, sender=cls)
         else:
