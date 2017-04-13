@@ -285,21 +285,44 @@ class MediaImageField(FileField):
 
     def contribute_to_class(self, cls, name, **kwargs):
         super(MediaImageField, self).contribute_to_class( cls, name, **kwargs)
-        if not settings.DME_UPLOAD_TO_S3:
-            return
-        if self.s3_is_public:
-            signals.post_save.connect(self.on_post_save_public_s3_callback, sender=cls)
+        if settings.DME_UPLOAD_TO_S3:
+            if self.s3_is_public:
+                signals.post_save.connect(self.on_post_save_public_s3_callback, sender=cls)
+            else:
+                signals.post_save.connect(self.on_post_save_private_s3_callback, sender=cls)
         else:
-            signals.post_save.connect(self.on_post_save_private_s3_callback, sender=cls)
+            signals.post_save.connect(self.on_post_save_local_callback, sender=cls)
+
         # TODO
         #signals.post_delete.connect(self.on_post_delete_callback, sender=cls)
+
+    def on_post_save_local_callback(self, instance, force=False, *args, **kwargs):
+        """
+        Save local image into Element model
+        """
+        process = False
+        image_url = None
+
+        if type(instance.__dict__[self.name]) in [str, unicode]:
+            image_url = instance.__dict__[self.name]
+        elif hasattr(instance.__dict__[self.name], "url"):
+            image_url = instance.__dict__[self.name].url
+
+        if image_url and not s3Helper.file_is_remote(image_url) and \
+                not Element.objects.filter(local_path=image_url).exists():
+            process = True
+
+        if process:
+            data = {}
+            data["image"] = instance.__dict__[self.name]
+            element = Element()
+            element.__dict__.update(data)
+            element.save()
 
     def on_post_save_private_s3_callback(self, instance, force=False, *args, **kwargs):
         """
         Save image into Element model
         """
-        from django.db.models.fields.files import FieldFile
-
         process = False
         image_url = None
 
@@ -332,8 +355,6 @@ class MediaImageField(FileField):
         """
         Save image into Element model
         """
-        from django.db.models.fields.files import FieldFile
-
         process = False
         image_url = None
 
@@ -431,12 +452,14 @@ class MediaFileField(FileField):
 
     def contribute_to_class(self, cls, name, **kwargs):
         super(MediaFileField, self).contribute_to_class( cls, name, **kwargs)
-        if not settings.DME_UPLOAD_TO_S3:
-            return
-        if self.s3_is_public:
-            signals.post_save.connect(self.on_post_save_public_s3_callback, sender=cls)
+        if settings.DME_UPLOAD_TO_S3:
+            if self.s3_is_public:
+                signals.post_save.connect(self.on_post_save_public_s3_callback, sender=cls)
+            else:
+                signals.post_save.connect(self.on_post_save_private_s3_callback, sender=cls)
         else:
-            signals.post_save.connect(self.on_post_save_private_s3_callback, sender=cls)
+            signals.post_save.connect(self.on_post_save_local_callback, sender=cls)
+
         # TODO
         #signals.post_delete.connect(self.on_post_delete_callback, sender=cls)
 
@@ -444,8 +467,6 @@ class MediaFileField(FileField):
         """
         Save file into Element model
         """
-        from django.db.models.fields.files import FieldFile
-
         process = False
         file_url = None
 
@@ -473,13 +494,33 @@ class MediaFileField(FileField):
                 instance.save()
                 signals.post_save.connect(self.on_post_save_private_s3_callback, sender=instance)
 
+    def on_post_save_local_callback(self, instance, force=False, *args, **kwargs):
+        """
+        Save local image into Element model
+        """
+        process = False
+        image_url = None
+
+        if type(instance.__dict__[self.name]) in [str, unicode]:
+            image_url = instance.__dict__[self.name]
+        elif hasattr(instance.__dict__[self.name], "url"):
+            image_url = instance.__dict__[self.name].url
+
+        if image_url and not s3Helper.file_is_remote(image_url) and \
+                not Element.objects.filter(local_path=image_url).exists():
+            process = True
+
+        if process:
+            data = {}
+            data["image"] = instance.__dict__[self.name]
+            element = Element()
+            element.__dict__.update(data)
+            element.save()
 
     def on_post_save_public_s3_callback(self, instance, force=False, *args, **kwargs):
         """
         Save file into Element model
         """
-        from django.db.models.fields.files import FieldFile
-
         process = False
         file_url = None
 
