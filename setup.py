@@ -5,22 +5,13 @@ from setuptools import setup
 
 from media_explorer import __version__ as version
 
-#http://pandoc.org/try/
 with open('README.rst') as f:
     readme = f.read()
-
-#try:
-#    from pypandoc import convert
-#    read_md = lambda f: convert(f, 'rst')
-#except ImportError:
-#    print("warning: pypandoc module not found, could not convert Markdown to RST")
-#    read_md = lambda f: open(f, 'r').read()
 
 setup(
     name='django-media-explorer',
     version=version,
     description='A Django application to manage your images, video links, embeds and slideshows.',
-    #long_description=read_md('README.md'),
     long_description=readme,
     license='MIT',
     author='Oxfam America Webteam',
@@ -32,7 +23,7 @@ setup(
     zip_safe=False,
     install_requires=[
         'django>=1.7,<1.10',
-        'micawber==0.3.3',
+        'micawber==0.3.4',
         'djangorestframework==3.1.2',
         'Pillow>=2.6.1',
         'django-ckeditor==4.4.8',
