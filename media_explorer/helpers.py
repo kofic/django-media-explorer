@@ -243,11 +243,6 @@ class ImageHelper(object):
             extension = file_name_array.pop()
             file_name = ".".join(file_name_array)
 
-        if extension.lower() not in ["png","jpg","gif","bmp","jpeg","tiff"]:
-            extension = image.format.lower()
-
-        extension = extension.lower()
-
         try:
             if os.path.exists(full_path):
                 image = Image.open(full_path)
@@ -257,6 +252,11 @@ class ImageHelper(object):
         except Exception as e:
             rtn["message"] = e.__str__()
             return rtn
+
+        if extension.lower() not in ["png","jpg","gif","bmp","jpeg","tiff"]:
+            extension = image.format.lower()
+
+        extension = extension.lower()
 
         image_width, image_height = image.size
         instance.image_width = image_width
