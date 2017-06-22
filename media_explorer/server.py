@@ -33,6 +33,7 @@ class MediaServer(object):
         # eg. 210x400, small, medium, large
         size = kwargs.get("size", "small")
         get_exact_size = kwargs.get("get_exact_size", False)
+        get_url = kwargs.get("get_signed_url", False)
 
         def _http(resized_file):
             # TODO - account for nginx file proxies
@@ -48,8 +49,13 @@ class MediaServer(object):
             except Exception as e:
                 pass
 
+            if file_obj and get_url:
+                return HttpResponse(file_obj.url, status=200)
+
             if not file_obj and resized_file.s3_path:
                 if resized_file.s3_is_public:
+                    if get_url:
+                        return HttpResponse(resized_file.image.image_url, status=200)
                     return HttpResponseRedirect(resized_file.image.image_url)
                 else:
 
@@ -74,6 +80,9 @@ class MediaServer(object):
                             }, 
                             ExpiresIn=timeout
                         )
+
+                    if get_url:
+                        return HttpResponse(url, status=200)
 
                     return HttpResponseRedirect(url)
 
