@@ -33,7 +33,7 @@ class MediaServer(object):
         # eg. 210x400, small, medium, large
         size = kwargs.get("size", "small")
         get_exact_size = kwargs.get("get_exact_size", False)
-        get_url = kwargs.get("get_signed_url", False)
+        get_url = kwargs.get("get_url", False)
 
         def _http(resized_file):
             # TODO - account for nginx file proxies
