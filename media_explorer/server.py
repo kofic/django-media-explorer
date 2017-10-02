@@ -1,10 +1,11 @@
 import os
 import mimetypes
+import requests
 from boto3 import client as boto3Client
 
 from localhost.conf.settings import settings
 
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect, StreamingHttpResponse
 
 try:
     #For Django version 1.8.13 and below
@@ -88,12 +89,28 @@ class MediaServer(object):
                     if get_url:
                         return HttpResponse(url, status=200)
 
-                    return HttpResponseRedirect(url)
+                    if redirect_url:
+                        return HttpResponseRedirect(url)
+
+                    try:
+                        content_type = mimetypes.guess_type(resized_file.s3_path)[0]
+                    except Exception as e:
+                        pass
+
+                    r = requests.get(url, stream=True)
+
+                    # TODO - get cache-control from kwargs
+                    response = StreamingHttpResponse(
+                        (chunk for chunk in r.iter_content(512 * 1024)),
+                        content_type=content_type
+                    )
+                    response['Cache-Control'] = "public, max-age=31557600"
+                    return response
 
             wrapper = FileWrapper(file_obj)
             response = HttpResponse(wrapper, content_type=content_type)
             response['Content-Length'] = file_size
-
+            response['Cache-Control'] = "public, max-age=31557600"
             return response
 
         if not site_id:
