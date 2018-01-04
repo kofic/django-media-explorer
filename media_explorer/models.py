@@ -270,6 +270,9 @@ def element_post_save(sender, instance, created, **kwargs):
     signals.post_save.disconnect(element_post_save, sender=Element)
 
     if instance.file and not s3Helper.file_is_remote(instance.file.url):
+        image_pil = imageHelper.apply_orientation(instance)
+        print "image_pil is", image_pil
+
         instance.type = "file"
         instance.file_url = instance.file.url
         instance.file_local_path = instance.file.url

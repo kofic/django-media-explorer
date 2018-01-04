@@ -479,22 +479,58 @@ class ImageHelper(object):
         rtn["success"] = True
         return rtn
 
-    def apply_orientation(self, im):
+    def apply_orientation(self, instance):
         """
-        Extract the oritentation EXIF tag from the image, which should be a PIL Image instance,
-        and if there is an orientation tag that would rotate the image, apply that rotation to
-        the Image instance given to do an in-place rotation.
+        Extract the oritentation EXIF tag from the image, which should
+        be a PIL Image instance, and if there is an orientation tag that
+        would rotate the image, apply that rotation to the Image instance 
+        given to do an in-place rotation.
 
         :param Image im: Image instance to inspect
         :return: A possibly transposed image instance
         """
-        def flip_horizontal(im): return im.transpose(Image.FLIP_LEFT_RIGHT)
-        def flip_vertical(im): return im.transpose(Image.FLIP_TOP_BOTTOM)
-        def rotate_180(im): return im.transpose(Image.ROTATE_180)
-        def rotate_90(im): return im.transpose(Image.ROTATE_90)
-        def rotate_270(im): return im.transpose(Image.ROTATE_270)
-        def transpose(im): return rotate_90(flip_horizontal(im))
-        def transverse(im): return rotate_90(flip_vertical(im))
+        print "ok applying it"
+        s3Helper = S3Helper()
+        if instance.exif_data or s3Helper.file_is_remote(instance.image_url):
+            return
+
+        url = instance.image_url
+        full_path = settings.PROJECT_ROOT + "/" + url.strip("/")
+
+        try:
+            image = Image.open(full_path)
+        except Exception as e:
+            return
+
+        try:
+            import json
+            import PIL.ExifTags
+
+            exif_data = {}
+            exif = {
+                PIL.ExifTags.TAGS[k]: v
+                for k, v in image._getexif().items()
+                if k in PIL.ExifTags.TAGS
+            }
+
+            for k, v in exif.iteritems():
+                try:
+                    exif_data[k] = v.decode('utf8')
+                except:
+                    pass
+            
+            instance.exif_data = json.dumps(exif_data)
+            instance.save()
+        except Exception as e:
+            pass
+
+        def flip_horizontal(image): return image.transpose(Image.FLIP_LEFT_RIGHT)
+        def flip_vertical(image): return image.transpose(Image.FLIP_TOP_BOTTOM)
+        def rotate_180(image): return image.transpose(Image.ROTATE_180)
+        def rotate_90(image): return image.transpose(Image.ROTATE_90)
+        def rotate_270(image): return image.transpose(Image.ROTATE_270)
+        def transpose(image): return rotate_90(flip_horizontal(image))
+        def transverse(image): return rotate_90(flip_vertical(image))
         orientation_funcs = [
             None,
             lambda x: x,
@@ -509,15 +545,16 @@ class ImageHelper(object):
 
         try:
             kOrientationEXIFTag = 0x0112
-            if hasattr(im, '_getexif'):
-                e = im._getexif()
+            if hasattr(image, '_getexif'):
+                e = image._getexif()
                 if e is not None:
                     orientation = e[kOrientationEXIFTag]
                     f = orientation_funcs[orientation]
-                    return f(im)
+                    return f(image)
         except:
             pass
-        return im
+
+        return image
 
 
 class FileHelper(object):
