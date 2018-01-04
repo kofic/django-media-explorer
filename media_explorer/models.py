@@ -10,8 +10,9 @@ from localhost.conf.settings import settings
 
 from .storage import DMEFileSystemStorage
 
-from .helpers import S3Helper
+from .helpers import S3Helper, ImageHelper
 s3Helper = S3Helper()
+imageHelper = ImageHelper()
 
 
 class Element(Base):
@@ -53,6 +54,9 @@ class Element(Base):
     thumbnail_image_width = models.IntegerField(blank=True,null=True,default='0')
     thumbnail_image_height = models.IntegerField(blank=True,null=True,default='0')
     type = models.CharField(_("Type"), max_length=10, default="image",choices=TYPE_CHOICES)
+
+    exif_data = models.TextField(blank=True, null=True)
+
     # Provided by localhost.core.models.Base
     #created_at = models.DateTimeField(blank=True,null=True,auto_now_add=True)
     #updated_at = models.DateTimeField(blank=True,null=True,auto_now=True)
@@ -316,9 +320,7 @@ def element_post_save(sender, instance, created, **kwargs):
             instance.original_file_name = instance.file_name
             instance.save()
 
-            from .helpers import ImageHelper
-            helper = ImageHelper()
-            rtn = helper.resize(instance)
+            rtn = imageHelper.resize(instance)
             if rtn["success"]: 
                 if rtn["thumbnail_image_url"]:
                     instance.thumbnail_image = None
