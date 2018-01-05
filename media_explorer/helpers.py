@@ -194,6 +194,42 @@ class S3Helper(object):
 class ImageHelper(object):
     """Image helper functions"""
 
+    def get_exif_data(self, full_path):
+
+        exif_data = {}
+
+        try:
+            import PIL.ExifTags
+
+            image = Image.open(full_path)
+
+            exif = {
+                PIL.ExifTags.TAGS[k]: v
+                for k, v in image._getexif().items()
+                if k in PIL.ExifTags.TAGS
+            }
+
+            for k, v in exif.iteritems():
+                try:
+                    exif_data[k] = v.decode('utf8')
+                except:
+                    pass
+            
+        except Exception as e:
+            pass
+
+        try:
+            kOrientationEXIFTag = 0x0112
+            if hasattr(image, '_getexif'):
+                e = image._getexif()
+                if e is not None:
+                    exif_data["exif_orientation"] = e[kOrientationEXIFTag]
+        except:
+            pass
+
+        return exif_data
+
+
     def get_resized_images(self, url, site_id):
         """Get resized images by url"""
         ResizedImage = get_model("media_explorer", "ResizedImage")

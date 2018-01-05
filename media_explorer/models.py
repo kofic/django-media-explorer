@@ -1,4 +1,5 @@
 import os
+import json
 import traceback
 
 from django.db import models
@@ -10,8 +11,9 @@ from localhost.conf.settings import settings
 
 from .storage import DMEFileSystemStorage
 
-from .helpers import S3Helper
+from .helpers import S3Helper, ImageHelper
 s3Helper = S3Helper()
+imageHelper = ImageHelper()
 
 
 class Element(Base):
@@ -53,6 +55,9 @@ class Element(Base):
     thumbnail_image_width = models.IntegerField(blank=True,null=True,default='0')
     thumbnail_image_height = models.IntegerField(blank=True,null=True,default='0')
     type = models.CharField(_("Type"), max_length=10, default="image",choices=TYPE_CHOICES)
+
+    exif_data = models.TextField(blank=True, null=True)
+
     # Provided by localhost.core.models.Base
     #created_at = models.DateTimeField(blank=True,null=True,auto_now_add=True)
     #updated_at = models.DateTimeField(blank=True,null=True,auto_now=True)
@@ -284,6 +289,15 @@ def element_post_save(sender, instance, created, **kwargs):
             instance.name = instance.file_name
 
         instance.thumbnail_image = instance.image
+
+        try:
+            url = instance.image_url
+            full_path = "%s/%s" % (settings.PROJECT_ROOT, url.strip("/"))
+            exif_data = imageHelper.get_exif_data(full_path)
+            if exif_data:
+                instance.exif_data = json.dumps(exif_data)
+        except Exception as e:
+            pass
 
     if instance.thumbnail_image and not s3Helper.file_is_remote(instance.thumbnail_image.url):
         instance.thumbnail_image_url = instance.thumbnail_image.url
