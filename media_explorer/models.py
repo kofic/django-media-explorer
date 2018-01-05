@@ -412,7 +412,7 @@ def resizedimage_post_save(sender, instance, created, **kwargs):
                     )
             transfer = S3Transfer(client)
 
-            s3_path = s3Helper.get_s3_path(instance.local_path)
+            s3_path = s3Helper.get_s3_path(instance.guid, instance.local_path)
 
             #is_public = settings.get(
             #        "DME_S3_FILE_IS_PUBLIC", 

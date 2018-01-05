@@ -26,12 +26,10 @@ class S3Helper(object):
             headers["ContentType"] = mimetypes.guess_type(url)[0]
         return headers
 
-    def get_s3_path(self, path):
-        s3_path = path.lstrip("/")
+    def get_s3_path(self, guid, path):
+        s3_path = "%s/%s" % (guid, path.lstrip("/"))
         if settings.DME_S3_FOLDER:
-            s3_path = settings.DME_S3_FOLDER.strip("/")
-            s3_path += "/"
-            s3_path += path.lstrip("/")
+            s3_path = "%s/%s/%s" % (settings.DME_S3_FOLDER.strip("/"), guid, path.lstrip("/"))
         return s3_path
 
     def get_s3_url(self, path):
@@ -68,7 +66,7 @@ class S3Helper(object):
                         )
                 transfer = S3Transfer(client)
 
-                file_s3_path = self.get_s3_path(instance.file_local_path)
+                file_s3_path = self.get_s3_path(instance.guid, instance.file_local_path)
 
                 transfer.upload_file(
                         str(settings.PROJECT_ROOT + instance.file_local_path),
@@ -101,7 +99,7 @@ class S3Helper(object):
                         )
                 transfer = S3Transfer(client)
 
-                s3_path = self.get_s3_path(instance.local_path)
+                s3_path = self.get_s3_path(instance.guid, instance.local_path)
 
                 transfer.upload_file(
                         str(settings.PROJECT_ROOT + instance.local_path),
@@ -134,7 +132,7 @@ class S3Helper(object):
                         )
                 transfer = S3Transfer(client)
 
-                s3_path = self.get_s3_path(instance.thumbnail_local_path)
+                s3_path = self.get_s3_path(instance.guid, instance.thumbnail_local_path)
 
                 transfer.upload_file(
                         str(settings.PROJECT_ROOT + instance.thumbnail_local_path),
