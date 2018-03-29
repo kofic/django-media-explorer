@@ -1,6 +1,7 @@
 import os
 import mimetypes
 import requests
+from threading import Lock
 from boto3 import client as boto3Client
 
 from localhost.conf.settings import settings
@@ -25,6 +26,9 @@ except ImportError:
 
 class MediaServer(object):
     """Use to server media by masking file URL"""
+
+    def __init__(self):
+        self._lock = Lock()
 
     def serve(self, **kwargs):
         """Serve image files"""
@@ -70,42 +74,43 @@ class MediaServer(object):
                             use_django_default=True
                             )
 
-                    client = boto3Client(
-                            's3', 
-                            settings.DME_S3_REGION,
-                            aws_access_key_id=settings.DME_S3_ACCESS_KEY_ID,
-                            aws_secret_access_key=settings.DME_S3_SECRET_ACCESS_KEY
+                    with self._lock:
+                        client = boto3Client(
+                                's3', 
+                                settings.DME_S3_REGION,
+                                aws_access_key_id=settings.DME_S3_ACCESS_KEY_ID,
+                                aws_secret_access_key=settings.DME_S3_SECRET_ACCESS_KEY
+                                )
+
+                        url = client.generate_presigned_url(
+                                'get_object', 
+                                Params = {
+                                    'Bucket': resized_file.s3_bucket, 
+                                    'Key': resized_file.s3_path
+                                }, 
+                                ExpiresIn=timeout
                             )
 
-                    url = client.generate_presigned_url(
-                            'get_object', 
-                            Params = {
-                                'Bucket': resized_file.s3_bucket, 
-                                'Key': resized_file.s3_path
-                            }, 
-                            ExpiresIn=timeout
+                        if get_url:
+                            return HttpResponse(url, status=200)
+
+                        if redirect_url:
+                            return HttpResponseRedirect(url)
+
+                        try:
+                            content_type = mimetypes.guess_type(resized_file.s3_path)[0]
+                        except Exception as e:
+                            pass
+
+                        r = requests.get(url, stream=True)
+
+                        # TODO - get cache-control from kwargs
+                        response = StreamingHttpResponse(
+                            (chunk for chunk in r.iter_content(512 * 1024)),
+                            content_type=content_type
                         )
-
-                    if get_url:
-                        return HttpResponse(url, status=200)
-
-                    if redirect_url:
-                        return HttpResponseRedirect(url)
-
-                    try:
-                        content_type = mimetypes.guess_type(resized_file.s3_path)[0]
-                    except Exception as e:
-                        pass
-
-                    r = requests.get(url, stream=True)
-
-                    # TODO - get cache-control from kwargs
-                    response = StreamingHttpResponse(
-                        (chunk for chunk in r.iter_content(512 * 1024)),
-                        content_type=content_type
-                    )
-                    response['Cache-Control'] = "public, max-age=31557600"
-                    return response
+                        response['Cache-Control'] = "public, max-age=31557600"
+                        return response
 
             wrapper = FileWrapper(file_obj)
             response = HttpResponse(wrapper, content_type=content_type)
