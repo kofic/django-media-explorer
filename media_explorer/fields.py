@@ -496,23 +496,23 @@ class MediaFileField(FileField):
 
     def on_post_save_local_callback(self, instance, force=False, *args, **kwargs):
         """
-        Save local image into Element model
+        Save local file into Element model
         """
         process = False
-        image_url = None
+        file_url = None
 
         if type(instance.__dict__[self.name]) in [str, unicode]:
-            image_url = instance.__dict__[self.name]
+            file_url = instance.__dict__[self.name]
         elif hasattr(instance.__dict__[self.name], "url"):
-            image_url = instance.__dict__[self.name].url
+            file_url = instance.__dict__[self.name].url
 
-        if image_url and not s3Helper.file_is_remote(image_url) and \
-                not Element.objects.filter(local_path=image_url).exists():
+        if file_url and not s3Helper.file_is_remote(file_url) and \
+                not Element.objects.filter(local_path=file_url).exists():
             process = True
 
         if process:
             data = {}
-            data["image"] = instance.__dict__[self.name]
+            data["file"] = instance.__dict__[self.name]
             element = Element()
             element.__dict__.update(data)
             element.save()
