@@ -32,12 +32,12 @@ class S3Helper(object):
             s3_path = "%s/%s/%s" % (settings.DME_S3_FOLDER.strip("/"), guid, path.lstrip("/"))
         return s3_path
 
-    def get_s3_url(self, path):
-        s3_url = "https://s3.amazonaws.com/"
-        s3_url += settings.DME_S3_BUCKET
-        s3_url += "/"
-        s3_url += path
-        return s3_url
+    def get_s3_url(self, path, **kwargs):
+        s3_bucket = kwargs.get(
+            "s3_bucket", 
+            settings.DME_S3_BUCKET
+        )
+        return "%s/%s/%s" % ("https://s3.amazonaws.com", s3_bucket, path)
 
     def file_is_remote(self, url):
         if url and "https:" in url \
