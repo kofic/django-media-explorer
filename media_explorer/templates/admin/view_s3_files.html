@@ -1,0 +1,23 @@
+{% extends 'admin/base_site.html' %}
+{% load l10n %}
+
+{% block content %}
+<div id="content-main">
+    {% if message %}
+        <ul class="messagelist">
+          <li class="warning">{{message}}</li>
+        </ul>
+    {% endif %}
+
+        {% for u in urls %}
+            <div>
+                <b>{{u.name}}</b><br>
+            {% if u.type == "image" %}
+                <img src="{{u.url}}">
+            {% else %}
+                <a href="{{u.url}}" target="_blank">{{u.url}}</a>
+            {% endif %}
+            </div>
+        {% endfor %}
+</div>
+{% endblock %}
