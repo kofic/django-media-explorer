@@ -3,21 +3,15 @@
 
 {% block content %}
 <div id="content-main">
-    {% if message %}
-        <ul class="messagelist">
-          <li class="warning">{{message}}</li>
-        </ul>
-    {% endif %}
-
-        {% for u in urls %}
-            <div>
-                <b>{{u.name}}</b><br>
-            {% if u.type == "image" %}
-                <img src="{{u.url}}">
-            {% else %}
-                <a href="{{u.url}}" target="_blank">{{u.url}}</a>
-            {% endif %}
-            </div>
-        {% endfor %}
+    {% for u in urls %}
+        <div style="margin-bottom: 20px">
+            <b>{{u.url}}</b><br>
+        {% if u.type == "image" %}
+            <img src="{{u.authenticated_url}}">
+        {% else %}
+            <a href="{{u.authenticated_url}}" target="_blank">{{u.url}}</a>
+        {% endif %}
+        </div>
+    {% endfor %}
 </div>
 {% endblock %}

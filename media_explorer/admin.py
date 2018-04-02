@@ -39,7 +39,8 @@ class ElementAdmin(admin.ModelAdmin):
                 )
 
                 url["name"] = q.name
-                url["url"] = response.content
+                url["url"] = file_url
+                url["authenticated_url"] = response.content
                 urls.append(url)
             except Exception as e:
                 pass
