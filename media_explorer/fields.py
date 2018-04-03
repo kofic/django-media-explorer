@@ -343,6 +343,9 @@ class MediaImageField(FileField):
         if process:
             data = {}
             data["image"] = instance.__dict__[self.name]
+            data["image_url"] = data["image"]
+            data["file_name"] = ntpath.basename(data["image"])
+            data["name"] = file_name
             element = Element()
             element.__dict__.update(data)
             element.s3_is_public = False
