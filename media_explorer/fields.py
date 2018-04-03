@@ -343,8 +343,8 @@ class MediaImageField(FileField):
         if process:
             data = {}
             data["image"] = instance.__dict__[self.name]
-            data["image_url"] = str(data["image"])
-            data["file_name"] = os.path.basename(data["image_url"])
+            data["image_url"] = image_url
+            data["file_name"] = os.path.basename(image_url)
             data["original_file_name"] = data["file_name"]
             data["name"] = data["file_name"]
             data["s3_bucket"], data["s3_path"] = s3Helper.get_s3_bucket_and_path(data["image_url"])
@@ -373,24 +373,52 @@ class MediaImageField(FileField):
         elif hasattr(instance.__dict__[self.name], "url"):
             image_url = instance.__dict__[self.name].url
 
-        if image_url and not s3Helper.file_is_remote(image_url) and \
-                not Element.objects.filter(local_path=image_url).exists():
-            process = True
+        #if image_url and not s3Helper.file_is_remote(image_url) and \
+        #        not Element.objects.filter(local_path=image_url).exists():
+        #    process = True
+
+        #if process:
+        #    data = {}
+        #    data["image"] = instance.__dict__[self.name]
+        #    element = Element()
+        #    element.__dict__.update(data)
+        #    element.s3_is_public = True
+        #    element.save()
+
+        #    # update instance with new path if saved to S3
+        #    if not element.local_path:
+        #        instance.__dict__[self.name] = element.image
+        #        signals.post_save.disconnect(self.on_post_save_public_s3_callback, sender=instance)
+        #        instance.save()
+        #        signals.post_save.connect(self.on_post_save_public_s3_callback, sender=instance)
+
+        if image_url:
+            if s3Helper.file_is_remote(image_url):
+                if not Element.objects.filter(image=image_url).exists():
+                    process = True
+            else:
+                if not Element.objects.filter(local_path=image_url).exists():
+                    process = True
 
         if process:
             data = {}
             data["image"] = instance.__dict__[self.name]
+            data["image_url"] = str(data["image"])
+            data["file_name"] = os.path.basename(data["image_url"])
+            data["original_file_name"] = data["file_name"]
+            data["name"] = data["file_name"]
+            data["s3_bucket"], data["s3_path"] = s3Helper.get_s3_bucket_and_path(data["image_url"])
             element = Element()
             element.__dict__.update(data)
-            element.s3_is_public = True
+            element.s3_is_public = False
             element.save()
 
             # update instance with new path if saved to S3
             if not element.local_path:
                 instance.__dict__[self.name] = element.image
-                signals.post_save.disconnect(self.on_post_save_public_s3_callback, sender=instance)
+                signals.post_save.disconnect(self.on_post_save_private_s3_callback, sender=instance)
                 instance.save()
-                signals.post_save.connect(self.on_post_save_public_s3_callback, sender=instance)
+                signals.post_save.connect(self.on_post_save_private_s3_callback, sender=instance)
 
     #def on_post_delete_callback(self, instance, force=False, *args, **kwargs):
     #    """
