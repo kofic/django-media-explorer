@@ -41,16 +41,16 @@ class MediaServer(object):
         get_url = kwargs.get("get_url", False)
         redirect_url = kwargs.get("redirect_url", False)
 
-        def _http(resized_file):
+        def _send_image_response(resized_image):
             # TODO - account for nginx file proxies
             file_name = None
             file_obj = None
             file_size = 0
             content_type = None
             try:
-                file_name = resized_file.image.file_name
-                file_size = resized_file.image.image.size
-                file_obj = resized_file.image.image
+                file_name = resized_image.image.file_name
+                file_size = resized_image.image.image.size
+                file_obj = resized_image.image.image
                 content_type = mimetypes.guess_type(file_name)[0]
             except Exception as e:
                 pass
@@ -61,16 +61,16 @@ class MediaServer(object):
             if file_obj and redirect_url:
                 return HttpResponseRedirect(file_obj.url)
 
-            if not file_obj and resized_file.s3_path:
-                if resized_file.s3_is_public:
+            if not file_obj and resized_image.s3_path:
+                if resized_image.s3_is_public:
                     if get_url:
-                        return HttpResponse(resized_file.image.image_url, status=200)
-                    return HttpResponseRedirect(resized_file.image.image_url)
+                        return HttpResponse(resized_image.image.image_url, status=200)
+                    return HttpResponseRedirect(resized_image.image.image_url)
                 else:
 
                     timeout = settings.get( 
                             "DME_S3_GENERATED_URL_TIMEOUT",
-                            resized_file.site_id,
+                            resized_image.site_id,
                             use_django_default=True
                             )
 
@@ -85,8 +85,8 @@ class MediaServer(object):
                         url = client.generate_presigned_url(
                                 'get_object', 
                                 Params = {
-                                    'Bucket': resized_file.s3_bucket, 
-                                    'Key': resized_file.s3_path
+                                    'Bucket': resized_image.s3_bucket, 
+                                    'Key': resized_image.s3_path
                                 }, 
                                 ExpiresIn=timeout
                             )
@@ -98,7 +98,7 @@ class MediaServer(object):
                             return HttpResponseRedirect(url)
 
                         try:
-                            content_type = mimetypes.guess_type(resized_file.s3_path)[0]
+                            content_type = mimetypes.guess_type(resized_image.s3_path)[0]
                         except Exception as e:
                             pass
 
@@ -153,7 +153,7 @@ class MediaServer(object):
                 size = "small"
 
         if image:
-            return _http(image)
+            return _send_image_response(image)
 
         fields2 = fields.copy()
         if size == "large":
@@ -167,6 +167,6 @@ class MediaServer(object):
             image = ResizedImage.objects.filter(**fields2).order_by("image_area")[0]
                 
         if image:
-            return _http(image)
+            return _send_image_response(image)
 
         return HttpResponse("Image not found" % size, status=404)
