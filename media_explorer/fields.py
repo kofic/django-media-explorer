@@ -347,6 +347,7 @@ class MediaImageField(FileField):
             data["file_name"] = os.path.basename(data["image_url"])
             data["original_file_name"] = data["file_name"]
             data["name"] = data["file_name"]
+            data["s3_bucket"], data["s3_path"] = s3Helper.get_s3_bucket_and_path(data["image_url"])
             element = Element()
             element.__dict__.update(data)
             element.s3_is_public = False

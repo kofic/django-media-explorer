@@ -18,6 +18,15 @@ except ImportError:
 
 class S3Helper(object):
     """S3 helper functions"""
+    def get_s3_bucket_and_path(full_path):
+        if full_path.startswith("https://s3.amazonaws.com"):
+            full_path = full_path[25:]
+        elif full_path.startswith("http://s3.amazonaws.com"):
+            full_path = full_path[24:]
+        s3_bucket = full_path.split("/")[0]
+        s3_path = full_path[len(s3_bucket)+1:]
+        return s3_bucket, s3_path
+
     def get_s3_headers(self, url, is_public):
         headers = {}
         if is_public:
