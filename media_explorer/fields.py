@@ -333,6 +333,7 @@ class MediaImageField(FileField):
         elif hasattr(instance.__dict__[self.name], "url"):
             image_url = instance.__dict__[self.name].url
 
+        print("IMAGE URL", image_url)
         if image_url:
             if s3Helper.file_is_remote(image_url):
                 file_is_obj = False
@@ -341,6 +342,8 @@ class MediaImageField(FileField):
             else:
                 if not Element.objects.filter(local_path=image_url).exists():
                     process = True
+
+        print("IMAGE URL2", file_is_obj)
 
         if process:
             data = {}
