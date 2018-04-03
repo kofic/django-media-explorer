@@ -336,10 +336,22 @@ class MediaImageField(FileField):
             image_url = instance.__dict__[self.name].url
 
         if image_url:
-            if s3Helper.file_is_remote(image_url):
+            if image_url.startswith("{"):
+                try:
+                    json_data = json.loads(image_url)
+                    image_url = s3Helper.get_s3_url(
+                        json_data["s3_path"].
+                        s3_bucket=json_data["_s3_bucket"]
+                    )
+                    s3_bucket = json_data["s3_bucket"]
+                    s3_path = json_data["s3_path"]
+                    file_size = json_data["s3_size"]
+                except Exception as e:
+                    pass
+            elif s3Helper.file_is_remote(image_url):
                 if not Element.objects.filter(image=image_url).exists():
                     process = True
-                    s3_bucket, s3_path, file_size = s3Helper.get_s3_info_from_url(image_url)
+                    s3_bucket, s3_path = s3Helper.get_s3_info_from_url(image_url)
             else:
                 if not Element.objects.filter(local_path=image_url).exists():
                     process = True

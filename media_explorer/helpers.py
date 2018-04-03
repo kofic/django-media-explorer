@@ -23,21 +23,6 @@ except ImportError:
 class S3Helper(object):
     """S3 helper functions"""
     def get_s3_info_from_url(self, full_path):
-        if full_path.startswith("https://{") or full_path.startswith("http://{"):
-            # We may send a url that looks like this: https://{"s3_bucket": "blah"}
-            # In this case we appended https:// to the json - so grab the json
-
-            if full_path.startswith("https://{"):
-                full_path = full_path[8:]
-            elif full_path.startswith("http://{"):
-                full_path = full_path[7:]
-
-            try:
-                data = json.loads(full_path)
-                return data["s3_bucket"], data["s3_path"], data["s3_size"]
-            except Exception as e:
-                pass
-
         if full_path.startswith("https://s3.amazonaws.com"):
             full_path = full_path[25:]
         elif full_path.startswith("http://s3.amazonaws.com"):
@@ -45,7 +30,7 @@ class S3Helper(object):
 
         s3_bucket = full_path.split("/")[0]
         s3_path = full_path[len(s3_bucket)+1:]
-        return s3_bucket, s3_path, 0
+        return s3_bucket, s3_path
 
     def get_s3_headers(self, url, is_public):
         headers = {}
