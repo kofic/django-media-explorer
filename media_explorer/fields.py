@@ -340,7 +340,7 @@ class MediaImageField(FileField):
                 try:
                     json_data = json.loads(image_url)
                     image_url = s3Helper.get_s3_url(
-                        json_data["s3_path"].
+                        json_data["s3_path"],
                         s3_bucket=json_data["_s3_bucket"]
                     )
                     s3_bucket = json_data["s3_bucket"]
