@@ -41,7 +41,8 @@ class MediaServer(object):
         get_url = kwargs.get("get_url", False)
         redirect_url = kwargs.get("redirect_url", False)
 
-        def _send_image_response(resized_image):
+        # Inner def - start
+        def _send_resized_image(resized_image):
             # TODO - account for nginx file proxies
             file_name = None
             file_obj = None
@@ -118,6 +119,8 @@ class MediaServer(object):
             response['Cache-Control'] = "public, max-age=31557600"
             return response
 
+        # Inner def - end
+
         if not site_id:
             return HttpResponse("Site id is required", status=404)
 
@@ -125,6 +128,7 @@ class MediaServer(object):
             return HttpResponse("Element id or URL is required", status=404)
 
         image = None
+        Element = get_model("media_explorer", "Element")
         ResizedImage = get_model("media_explorer", "ResizedImage")
 
         fields = {}
@@ -133,6 +137,17 @@ class MediaServer(object):
             fields["image__id"] = element_id
         else:
             fields["image__image_url"] = url
+
+        if not ResizedImage.objects.filter(**fields).exists():
+            # Let's check for element and send
+            fields = {}
+            fields["site_id"] = site_id
+            if element_id:
+                fields["id"] = element_id
+            else:
+                fields["image_url__iexact"] = url
+
+            print("ok then", fields)
 
         if not ResizedImage.objects.filter(**fields).exists():
             return HttpResponse("Image not found", status=404)
@@ -153,7 +168,7 @@ class MediaServer(object):
                 size = "small"
 
         if image:
-            return _send_image_response(image)
+            return _send_resized_image(image)
 
         fields2 = fields.copy()
         if size == "large":
@@ -167,6 +182,6 @@ class MediaServer(object):
             image = ResizedImage.objects.filter(**fields2).order_by("image_area")[0]
                 
         if image:
-            return _send_image_response(image)
+            return _send_resized_image(image)
 
         return HttpResponse("Image not found" % size, status=404)
