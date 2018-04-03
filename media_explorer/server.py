@@ -147,7 +147,8 @@ class MediaServer(object):
             else:
                 fields["image_url__iexact"] = url
 
-            print("ok then", fields)
+            element = Element.objects.filter(**fields).first()
+            print("element", element)
 
         if not ResizedImage.objects.filter(**fields).exists():
             return HttpResponse("Image not found", status=404)
