@@ -328,8 +328,10 @@ class MediaImageField(FileField):
 
         if type(instance.__dict__[self.name]) in [str, unicode]:
             image_url = instance.__dict__[self.name]
+            print("in str")
         elif hasattr(instance.__dict__[self.name], "url"):
             image_url = instance.__dict__[self.name].url
+            print("in obj")
 
         if image_url:
             if s3Helper.file_is_remote(image_url):
