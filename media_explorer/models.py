@@ -35,10 +35,14 @@ class Element(Base):
     file_s3_bucket = models.CharField(max_length=255,blank=True,null=True)
     file_s3_path = models.CharField(max_length=255,blank=True,null=True)
     file_s3_is_public = models.BooleanField(_("S3 file is public"), default=True)
+    file_s3_size = models.IntegerField(blank=True,null=True,default='0')
+
     image = models.ImageField(blank=True, null=True, max_length=255, upload_to="images/", storage=DMEFileSystemStorage())
     s3_bucket = models.CharField(max_length=255,blank=True,null=True)
     s3_path = models.CharField(max_length=255,blank=True,null=True)
     s3_is_public = models.BooleanField(_("S3 image is public"), default=True)
+    s3_size = models.IntegerField(blank=True,null=True,default='0')
+
     local_path = models.CharField(max_length=255,blank=True,null=True)
     image_url = models.CharField(max_length=255,blank=True,null=True)
     image_width = models.IntegerField(blank=True,null=True,default='0')

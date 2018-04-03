@@ -326,6 +326,9 @@ class MediaImageField(FileField):
         """
         process = False
         image_url = None
+        file_size = 0
+        s3_bucket = None
+        s3_path = None
 
         if type(instance.__dict__[self.name]) in [str, unicode]:
             image_url = instance.__dict__[self.name]
@@ -336,6 +339,7 @@ class MediaImageField(FileField):
             if s3Helper.file_is_remote(image_url):
                 if not Element.objects.filter(image=image_url).exists():
                     process = True
+                    s3_bucket, s3_path, file_size = s3Helper.get_s3_info_from_url(image_url)
             else:
                 if not Element.objects.filter(local_path=image_url).exists():
                     process = True
@@ -347,7 +351,9 @@ class MediaImageField(FileField):
             data["file_name"] = os.path.basename(image_url)
             data["original_file_name"] = data["file_name"]
             data["name"] = data["file_name"]
-            data["s3_bucket"], data["s3_path"] = s3Helper.get_s3_bucket_and_path(data["image_url"])
+            data["s3_bucket"] = s3_bucket
+            data["s3_path"] = s3_path
+            data["s3_size"] = file_size
             element = Element()
             element.__dict__.update(data)
             element.s3_is_public = False
