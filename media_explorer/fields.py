@@ -336,7 +336,12 @@ class MediaImageField(FileField):
             image_url = instance.__dict__[self.name].url
 
         if image_url:
-            if image_url.startswith("{"):
+            if image_url.startswith("https://{") or image_url.startswith("http://{"):
+                if image_url.startswith("https://{"):
+                    image_url = image_url[8:]
+                elif image_url.startswith("http://{"):
+                    image_url = image_url[7:]
+
                 try:
                     json_data = json.loads(image_url)
                     image_url = s3Helper.get_s3_url(
