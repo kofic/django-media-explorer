@@ -343,8 +343,6 @@ class MediaImageField(FileField):
                 if not Element.objects.filter(local_path=image_url).exists():
                     process = True
 
-        print("IMAGE URL2", file_is_obj)
-
         if process:
             data = {}
             data["image"] = instance.__dict__[self.name]
@@ -353,6 +351,7 @@ class MediaImageField(FileField):
                 data["file_name"] = os.path.basename(data["image"])
                 data["original_file_name"] = data["file_name"]
                 data["name"] = data["file_name"]
+            print("IMAGE DD", data)
             element = Element()
             element.__dict__.update(data)
             element.s3_is_public = False
