@@ -1,3 +1,4 @@
+import os
 import json
 from django.db import models
 from django.core.exceptions import ValidationError
@@ -343,7 +344,7 @@ class MediaImageField(FileField):
             data = {}
             data["image"] = instance.__dict__[self.name]
             data["image_url"] = data["image"]
-            data["file_name"] = data["image"]
+            data["file_name"] = os.path.basename(data["image"])
             data["original_file_name"] = data["file_name"]
             data["name"] = data["file_name"]
             element = Element()
