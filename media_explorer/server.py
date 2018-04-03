@@ -42,6 +42,78 @@ class MediaServer(object):
         redirect_url = kwargs.get("redirect_url", False)
 
         # Inner def - start
+
+        def _send_element(element):
+            file_name = None
+            file_obj = None
+            file_size = 0
+            content_type = None
+            try:
+                file_name = element.file_name
+                # TODO - get file_size
+                file_size = 0
+                #file_obj = element.image
+                content_type = mimetypes.guess_type(file_name)[0]
+            except Exception as e:
+                pass
+
+            if element.s3_path:
+                if element.s3_is_public:
+                    if get_url:
+                        return HttpResponse(element.image_url, status=200)
+                    return HttpResponseRedirect(element.image_url)
+                else:
+
+                    timeout = settings.get( 
+                            "DME_S3_GENERATED_URL_TIMEOUT",
+                            element.site_id,
+                            use_django_default=True
+                            )
+
+                    with self._lock:
+                        client = boto3Client(
+                                's3', 
+                                settings.DME_S3_REGION,
+                                aws_access_key_id=settings.DME_S3_ACCESS_KEY_ID,
+                                aws_secret_access_key=settings.DME_S3_SECRET_ACCESS_KEY
+                                )
+
+                        url = client.generate_presigned_url(
+                                'get_object', 
+                                Params = {
+                                    'Bucket': element.s3_bucket, 
+                                    'Key': element.s3_path
+                                }, 
+                                ExpiresIn=timeout
+                            )
+
+                        if get_url:
+                            return HttpResponse(url, status=200)
+
+                        if redirect_url:
+                            return HttpResponseRedirect(url)
+
+                        try:
+                            content_type = mimetypes.guess_type(element.s3_path)[0]
+                        except Exception as e:
+                            pass
+
+                        r = requests.get(url, stream=True)
+
+                        # TODO - get cache-control from kwargs
+                        response = StreamingHttpResponse(
+                            (chunk for chunk in r.iter_content(512 * 1024)),
+                            content_type=content_type
+                        )
+                        response['Cache-Control'] = "public, max-age=31557600"
+                        return response
+
+            wrapper = FileWrapper(file_obj)
+            response = HttpResponse(wrapper, content_type=content_type)
+            response['Content-Length'] = file_size
+            response['Cache-Control'] = "public, max-age=31557600"
+            return response
+
         def _send_resized_image(resized_image):
             # TODO - account for nginx file proxies
             file_name = None
@@ -148,7 +220,8 @@ class MediaServer(object):
                 fields["image_url__iexact"] = url
 
             element = Element.objects.filter(**fields).first()
-            print("element", element)
+            if element:
+                return _send_element(element)
 
         if not ResizedImage.objects.filter(**fields).exists():
             return HttpResponse("Image not found", status=404)
