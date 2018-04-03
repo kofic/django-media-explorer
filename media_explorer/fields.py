@@ -328,10 +328,8 @@ class MediaImageField(FileField):
 
         if type(instance.__dict__[self.name]) in [str, unicode]:
             image_url = instance.__dict__[self.name]
-            print("in str")
         elif hasattr(instance.__dict__[self.name], "url"):
             image_url = instance.__dict__[self.name].url
-            print("in obj")
 
         if image_url:
             if s3Helper.file_is_remote(image_url):
@@ -346,7 +344,7 @@ class MediaImageField(FileField):
             data["image"] = instance.__dict__[self.name]
             data["image_url"] = data["image"]
             data["file_name"] = data["image"]
-            print(dir(data["image"]))
+            data["original_file_name"] = data["file_name"]
             data["name"] = data["file_name"]
             element = Element()
             element.__dict__.update(data)
