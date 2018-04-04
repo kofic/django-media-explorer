@@ -58,7 +58,7 @@ class Element(Base):
     thumbnail_image_url = models.CharField(max_length=255,blank=True,null=True)
     thumbnail_image_width = models.IntegerField(blank=True,null=True,default='0')
     thumbnail_image_height = models.IntegerField(blank=True,null=True,default='0')
-    type = models.CharField(_("Type"), max_length=10, default="image",choices=TYPE_CHOICES)
+    type = models.CharField(_("Type"), max_length=10, default="image", choices=TYPE_CHOICES)
 
     exif_data = models.TextField(blank=True, null=True)
 
