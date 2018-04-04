@@ -235,6 +235,13 @@ class MediaServer(object):
                 fields["image_url__iexact"] = url
 
             element = Element.objects.filter(**fields).first()
+
+            if not element:
+                fields = {}
+                fields["site_id"] = site_id
+                fields["file_url__iexact"] = url
+                element = Element.objects.filter(**fields).first()
+
             if element:
                 return _send_element(element)
 
