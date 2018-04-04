@@ -46,46 +46,61 @@ class MediaServer(object):
         def _send_element(element):
             file_name = None
             file_obj = None
-            file_size = 0
             content_type = None
+
+            s3_bucket = None
+            s3_path = None
+            s3_url = None
+            s3_is_public = None
+            s3_size = 0
+
+            file_name = element.file_name
             try:
-                file_name = element.file_name
-                # TODO - get file_size
-                file_size = 0
-                #file_obj = element.image
                 content_type = mimetypes.guess_type(file_name)[0]
             except Exception as e:
                 pass
 
-            if element.s3_path:
-                if element.s3_is_public:
-                    if get_url:
-                        return HttpResponse(element.image_url, status=200)
-                    return HttpResponseRedirect(element.image_url)
-                else:
+            if element.image_url:
+                s3_url = element.image_url
+                s3_bucket = element.s3_bucket
+                s3_path = element.s3_path
+                s3_is_public = element.s3_is_public
+                s3_size = element.s3_size
+            elif element.file_url:
+                s3_url = element.file_url
+                s3_bucket = element.file_s3_bucket
+                s3_path = element.file_s3_path
+                s3_is_public = element.file_s3_is_public
+                s3_size = element.file_s3_size
 
+            if s3_path:
+                if is_public:
+                    if get_url:
+                        return HttpResponse(s3_url, status=200)
+                    return HttpResponseRedirect(s3_url)
+                else:
                     timeout = settings.get( 
-                            "DME_S3_GENERATED_URL_TIMEOUT",
-                            element.site_id,
-                            use_django_default=True
-                            )
+                        "DME_S3_GENERATED_URL_TIMEOUT",
+                        element.site_id,
+                        use_django_default=True
+                    )
 
                     with self._lock:
                         client = boto3Client(
-                                's3', 
-                                settings.DME_S3_REGION,
-                                aws_access_key_id=settings.DME_S3_ACCESS_KEY_ID,
-                                aws_secret_access_key=settings.DME_S3_SECRET_ACCESS_KEY
-                                )
+                            's3', 
+                            settings.DME_S3_REGION,
+                            aws_access_key_id=settings.DME_S3_ACCESS_KEY_ID,
+                            aws_secret_access_key=settings.DME_S3_SECRET_ACCESS_KEY
+                        )
 
                         url = client.generate_presigned_url(
-                                'get_object', 
-                                Params = {
-                                    'Bucket': element.s3_bucket, 
-                                    'Key': element.s3_path
-                                }, 
-                                ExpiresIn=timeout
-                            )
+                            'get_object', 
+                            Params = {
+                                'Bucket': s3_bucket, 
+                                'Key': s3_path
+                            }, 
+                            ExpiresIn=timeout
+                        )
 
                         if get_url:
                             return HttpResponse(url, status=200)
@@ -94,7 +109,7 @@ class MediaServer(object):
                             return HttpResponseRedirect(url)
 
                         try:
-                            content_type = mimetypes.guess_type(element.s3_path)[0]
+                            content_type = mimetypes.guess_type(s3_path)[0]
                         except Exception as e:
                             pass
 
@@ -110,7 +125,7 @@ class MediaServer(object):
 
             wrapper = FileWrapper(file_obj)
             response = HttpResponse(wrapper, content_type=content_type)
-            response['Content-Length'] = file_size
+            response['Content-Length'] = s3_size
             response['Cache-Control'] = "public, max-age=31557600"
             return response
 
