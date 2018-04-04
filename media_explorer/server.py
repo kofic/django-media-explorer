@@ -74,7 +74,7 @@ class MediaServer(object):
                 s3_size = element.file_s3_size
 
             if s3_path:
-                if is_public:
+                if s3_is_public:
                     if get_url:
                         return HttpResponse(s3_url, status=200)
                     return HttpResponseRedirect(s3_url)
