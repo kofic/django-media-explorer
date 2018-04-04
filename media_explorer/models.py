@@ -22,7 +22,12 @@ class Element(Base):
     NOTE: if type=video you can still have a thumbnail_image
     """
 
-    TYPE_CHOICES = (('image','Image'), ('video','Video'), ('file', 'File'))
+    TYPE_CHOICES = (
+        ('image', 'Image'), 
+        ('video', 'Video'), 
+        ('audio', 'Audio'), 
+        ('file', 'File')
+    )
 
     name = models.CharField(max_length=150,blank=True,null=True)
     file_name = models.CharField(max_length=150,blank=True,null=True)
