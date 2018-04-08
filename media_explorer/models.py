@@ -65,7 +65,10 @@ class Element(Base):
     thumbnail_image_height = models.IntegerField(blank=True,null=True,default='0')
     type = models.CharField(_("Type"), max_length=10, default="image", choices=TYPE_CHOICES)
 
+    # Exif data from local image file
     exif_data = models.TextField(blank=True, null=True)
+
+    meta_data = models.TextField(blank=True, null=True)
 
     # Provided by localhost.core.models.Base
     #created_at = models.DateTimeField(blank=True,null=True,auto_now_add=True)
