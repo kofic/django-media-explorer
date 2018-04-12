@@ -4,7 +4,7 @@ import traceback
 
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
-from django.db.models import signals
+from django.db.models import F, signals
 
 from localhost.core.models import Base, User
 from localhost.conf.settings import settings
@@ -70,6 +70,8 @@ class Element(Base):
 
     meta_data = models.TextField(blank=True, null=True)
 
+    access_counter = models.IntegerField(default='0')
+
     # Provided by localhost.core.models.Base
     #created_at = models.DateTimeField(blank=True,null=True,auto_now_add=True)
     #updated_at = models.DateTimeField(blank=True,null=True,auto_now=True)
@@ -87,6 +89,10 @@ class Element(Base):
             else:
                 self.name = self.file_name
         super(Element, self).save(*args, **kwargs)
+
+    def increment_access_counter(self):
+        # Using update so I don't use save()
+        Element.objects.filter(id=self.id).update(access_counter=F('access_counter')+1)
 
 
 class Gallery(Base):

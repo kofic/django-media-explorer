@@ -54,6 +54,9 @@ class MediaServer(object):
             s3_is_public = None
             s3_size = 0
 
+            # We are ready to serve - increment counter
+            element.increment_access_counter()
+
             file_name = element.file_name
             try:
                 content_type = mimetypes.guess_type(file_name)[0]
