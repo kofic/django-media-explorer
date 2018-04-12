@@ -9,7 +9,7 @@ from django.db.models import signals
 
 
 class ElementAdmin(admin.ModelAdmin):
-    search_fields = ["name", "description", "credit"]
+    search_fields = ["name", "description", "credit", "image_url", "file_url", "file_name"]
     list_display = ('id', 'name')
     list_filter = ('type',)
 
