@@ -10,7 +10,7 @@ from django.db.models import signals
 
 class ElementAdmin(admin.ModelAdmin):
     search_fields = ["name", "description", "credit", "image_url", "file_url", "file_name"]
-    list_display = ('id', 'name')
+    list_display = ('id', 'name', 'access_counter')
     list_filter = ('type',)
 
     actions = ['view_s3_files']
